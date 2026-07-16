@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pdfinfo \"/c/Users/andrea/Downloads/MER_Modelo_Relacional_JJHealthyFood.pdf\")",
+      "Bash(pdftotext -layout \"/c/Users/andrea/Downloads/MER_Modelo_Relacional_JJHealthyFood.pdf\" -)"
+    ]
+  }
+}
