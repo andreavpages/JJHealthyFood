@@ -2,7 +2,12 @@
   "permissions": {
     "allow": [
       "Bash(pdfinfo \"/c/Users/andrea/Downloads/MER_Modelo_Relacional_JJHealthyFood.pdf\")",
-      "Bash(pdftotext -layout \"/c/Users/andrea/Downloads/MER_Modelo_Relacional_JJHealthyFood.pdf\" -)"
+      "Bash(pdftotext -layout \"/c/Users/andrea/Downloads/MER_Modelo_Relacional_JJHealthyFood.pdf\" -)",
+      "Bash(npm run *)",
+      "Bash(npx tsc *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" -L http://localhost:3000/dashboard/pedidos/pendientes/comanda)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000/dashboard)",
+      "Bash(pdftotext -layout \"C:/Users/andrea/Downloads/Comandas_JJHealthyFood.pdf\" -)"
     ]
   }
 }

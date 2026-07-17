@@ -1,26 +1,115 @@
 @import "tailwindcss";
 
+/* Paleta "Earth & Harvest" (JJ Healthy Food) - ver diseños en Stitch */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --primary: #33450d;
+  --on-primary: #ffffff;
+  --primary-container: #4a5d23;
+  --on-primary-container: #bed58e;
+
+  --secondary: #944a00;
+  --on-secondary: #ffffff;
+  --secondary-container: #fc8f34;
+  --on-secondary-container: #663100;
+
+  --tertiary: #37431b;
+  --on-tertiary: #ffffff;
+  --tertiary-container: #4e5b30;
+  --on-tertiary-container: #c2d29d;
+
+  --primary-fixed: #d4eca2;
+  --primary-fixed-dim: #b8cf88;
+  --on-primary-fixed: #141f00;
+  --on-primary-fixed-variant: #3b4d14;
+  --secondary-fixed: #ffdcc5;
+  --secondary-fixed-dim: #ffb783;
+  --on-secondary-fixed: #301400;
+  --on-secondary-fixed-variant: #713700;
+  --tertiary-fixed: #d9e9b2;
+  --tertiary-fixed-dim: #bdcd98;
+  --on-tertiary-fixed: #141f00;
+  --on-tertiary-fixed-variant: #3e4b22;
+
+  --surface: #fcf9ef;
+  --surface-dim: #dddad0;
+  --surface-bright: #fcf9ef;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #f7f4e9;
+  --surface-container: #f1eee4;
+  --surface-container-high: #ebe8de;
+  --surface-container-highest: #e5e2d9;
+  --on-surface: #1c1c16;
+  --on-surface-variant: #45483c;
+
+  --outline: #76786b;
+  --outline-variant: #c6c8b8;
+
+  --error: #ba1a1a;
+  --on-error: #ffffff;
+  --error-container: #ffdad6;
+  --on-error-container: #93000a;
+
+  --background: var(--surface);
+  --foreground: var(--on-surface);
 }
 
 @theme inline {
+  --color-primary: var(--primary);
+  --color-on-primary: var(--on-primary);
+  --color-primary-container: var(--primary-container);
+  --color-on-primary-container: var(--on-primary-container);
+
+  --color-secondary: var(--secondary);
+  --color-on-secondary: var(--on-secondary);
+  --color-secondary-container: var(--secondary-container);
+  --color-on-secondary-container: var(--on-secondary-container);
+
+  --color-tertiary: var(--tertiary);
+  --color-on-tertiary: var(--on-tertiary);
+  --color-tertiary-container: var(--tertiary-container);
+  --color-on-tertiary-container: var(--on-tertiary-container);
+
+  --color-primary-fixed: var(--primary-fixed);
+  --color-primary-fixed-dim: var(--primary-fixed-dim);
+  --color-on-primary-fixed: var(--on-primary-fixed);
+  --color-on-primary-fixed-variant: var(--on-primary-fixed-variant);
+  --color-secondary-fixed: var(--secondary-fixed);
+  --color-secondary-fixed-dim: var(--secondary-fixed-dim);
+  --color-on-secondary-fixed: var(--on-secondary-fixed);
+  --color-on-secondary-fixed-variant: var(--on-secondary-fixed-variant);
+  --color-tertiary-fixed: var(--tertiary-fixed);
+  --color-tertiary-fixed-dim: var(--tertiary-fixed-dim);
+  --color-on-tertiary-fixed: var(--on-tertiary-fixed);
+  --color-on-tertiary-fixed-variant: var(--on-tertiary-fixed-variant);
+
+  --color-surface: var(--surface);
+  --color-surface-dim: var(--surface-dim);
+  --color-surface-bright: var(--surface-bright);
+  --color-surface-container-lowest: var(--surface-container-lowest);
+  --color-surface-container-low: var(--surface-container-low);
+  --color-surface-container: var(--surface-container);
+  --color-surface-container-high: var(--surface-container-high);
+  --color-surface-container-highest: var(--surface-container-highest);
+  --color-on-surface: var(--on-surface);
+  --color-on-surface-variant: var(--on-surface-variant);
+
+  --color-outline: var(--outline);
+  --color-outline-variant: var(--outline-variant);
+
+  --color-error: var(--error);
+  --color-on-error: var(--on-error);
+  --color-error-container: var(--error-container);
+  --color-on-error-container: var(--on-error-container);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-display: var(--font-source-serif-4);
+  --font-sans: var(--font-manrope);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
