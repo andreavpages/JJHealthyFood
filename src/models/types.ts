@@ -7,8 +7,9 @@ export type Clienta = {
   created_at: string;
 };
 
-export type DiaEntrega = "miercoles" | "jueves";
+export type DiaEntrega = "domingo" | "lunes";
 export type EstadoPedido = "pendiente" | "en_preparacion" | "entregado";
+export type ModoPedido = "racion" | "macro";
 
 export type Pedido = {
   id: string;
@@ -16,6 +17,7 @@ export type Pedido = {
   fecha_pedido: string;
   dia_entrega: DiaEntrega;
   estado: EstadoPedido;
+  modo: ModoPedido;
   precio_total: number;
   notas: string | null;
 };
@@ -26,7 +28,11 @@ export type ComidaPedido = {
   numero_comida: number;
   proteina: string;
   carbohidrato: string;
+  vegetal: string | null;
   extra: string | null;
+  gramos_proteina: number | null;
+  gramos_carbohidrato: number | null;
+  precio: number;
   es_desayuno: boolean;
 };
 
@@ -52,11 +58,15 @@ export type PedidoParaComanda = Pedido & {
 
 export type EstadoClienta = "vip" | "recurrente" | "nuevo" | "inactivo";
 
-export type CategoriaMenu = "proteina" | "carbohidrato" | "desayuno";
+export type CategoriaMenu = "proteina" | "carbohidrato" | "vegetal" | "desayuno";
+export type NivelProteina = "sencilla" | "premium";
 
 export type OpcionMenu = {
   id: string;
   categoria: CategoriaMenu;
   nombre: string;
+  nivel: NivelProteina | null;
+  precio_racion: number | null;
+  precio_macro_gramo: number | null;
   orden: number;
 };

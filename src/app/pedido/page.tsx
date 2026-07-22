@@ -11,20 +11,21 @@ export default async function PedidoPage() {
   const supabase = await createClient();
   const opciones = await listarOpcionesMenu(supabase);
 
-  const proteinas = opciones
-    .filter((o) => o.categoria === "proteina")
-    .map((o) => o.nombre);
+  const proteinas = opciones.filter((o) => o.categoria === "proteina");
   const carbohidratos = opciones
     .filter((o) => o.categoria === "carbohidrato")
     .map((o) => o.nombre);
-  const opcionesDesayuno = opciones
-    .filter((o) => o.categoria === "desayuno")
+  const vegetales = opciones
+    .filter((o) => o.categoria === "vegetal")
     .map((o) => o.nombre);
+  const opcionesDesayuno = opciones
+    .filter((o) => o.categoria === "desayuno");
 
   return (
     <PedidoWizard
       proteinas={proteinas}
       carbohidratos={carbohidratos}
+      vegetales={vegetales}
       opcionesDesayuno={opcionesDesayuno}
     />
   );

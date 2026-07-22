@@ -10,7 +10,11 @@ export async function crearComidasPedido(
     .insert(comidas)
     .select();
 
-  if (error) throw error;
+  if (error) {
+    console.error("Error Supabase al insertar comidas:", JSON.stringify(error, null, 2));
+    console.error("Datos que se intentaron insertar:", JSON.stringify(comidas, null, 2));
+    throw error;
+  }
   return data as ComidaPedido[];
 }
 

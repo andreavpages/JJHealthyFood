@@ -22,7 +22,7 @@ export default async function ComandaPage(
         <div className="print:hidden mb-4 flex justify-center">
           <BotonImprimirComanda />
         </div>
-        <ComandaTicket pedido={pedido} />
+        <ComandaTicket pedido={pedido} showSeparator={true} />
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import {
   UtensilsCrossed,
   ChevronLeft,
@@ -9,6 +9,9 @@ import {
   Clock,
   Leaf,
   Truck,
+  Minus,
+  Plus,
+  Pencil,
 } from "lucide-react";
 import { Chip } from "./chip";
 import {
@@ -17,23 +20,43 @@ import {
   type ComidaSeleccionada,
   type DatosEntrega,
 } from "@/controllers/pedidos.actions";
-import type { DiaEntrega } from "@/models/types";
+import type { DiaEntrega, ModoPedido, OpcionMenu } from "@/models/types";
 
-const MAX_COMIDAS = 5;
+const TELEFONO_US_REGEX = /^(\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/;
 
 type TipoComida = "regular" | "desayuno";
 
 type ComidaSlot = {
   tipo: TipoComida;
-  proteina: string;
+  proteinaId: string;
   carbohidrato: string;
+  vegetal: string;
+  cantidad: number;
+  gramosProteina: number;
+  gramosCarbohidrato: number;
+  extraActivo: boolean;
+  extraValor: string;
 };
 
 const comidaVacia: ComidaSlot = {
   tipo: "regular",
-  proteina: "",
+  proteinaId: "",
   carbohidrato: "",
+  vegetal: "",
+  cantidad: 1,
+  gramosProteina: 100,
+  gramosCarbohidrato: 100,
+  extraActivo: false,
+  extraValor: "",
 };
+
+function formatearMoneda(valor: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+  }).format(valor);
+}
 
 function proximaFecha(diaSemana: number): Date {
   const hoy = new Date();
@@ -44,36 +67,68 @@ function proximaFecha(diaSemana: number): Date {
 }
 
 function etiquetaFecha(fecha: Date) {
-  const texto = new Intl.DateTimeFormat("es-VE", {
+  return new Intl.DateTimeFormat("en-US", {
     weekday: "long",
     day: "numeric",
     month: "short",
   }).format(fecha);
-  return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
+const PRECIOS_MACRO: Record<string, number> = {
+  sencilla: 12,
+  premium: 14,
+};
+
+function precioComida(
+  slot: ComidaSlot,
+  modo: ModoPedido,
+  proteinas: OpcionMenu[],
+  opcionesDesayuno: OpcionMenu[]
+): number {
+  if (slot.tipo === "desayuno") {
+    const desayuno = opcionesDesayuno.find((d) => d.nombre === slot.proteinaId);
+    if (!desayuno) return 0;
+    const precioBD = Number(desayuno.precio_racion);
+    if (!isNaN(precioBD) && precioBD > 0) return precioBD;
+    return 0;
+  }
+  const proteina = proteinas.find((p) => p.id === slot.proteinaId);
+  if (!proteina) return 0;
+  if (modo === "macro") {
+    const precioBD = Number(proteina.precio_macro_gramo);
+    if (!isNaN(precioBD) && precioBD > 0) return precioBD;
+    const fallback = proteina.nivel ? PRECIOS_MACRO[proteina.nivel] : undefined;
+    return fallback ?? 0;
+  }
+  const precioBD = Number(proteina.precio_racion);
+  if (!isNaN(precioBD) && precioBD > 0) return precioBD;
+  return 0;
 }
 
 function etiquetaPaso(paso: number, cantidad: number) {
-  if (paso === 0) return "Cantidad";
-  if (paso <= cantidad) return `Comida ${paso}`;
-  if (paso === cantidad + 1) return "Entrega";
-  return "Resumen";
+  if (paso === 0) return "Quantity";
+  if (paso === 1) return "Mode";
+  if (paso <= cantidad + 1) return `Meal ${paso - 1}`;
+  if (paso === cantidad + 2) return "Delivery";
+  return "Summary";
 }
 
 export function PedidoWizard({
   proteinas,
   carbohidratos,
+  vegetales,
   opcionesDesayuno,
 }: {
-  proteinas: string[];
+  proteinas: OpcionMenu[];
   carbohidratos: string[];
-  opcionesDesayuno: string[];
+  vegetales: string[];
+  opcionesDesayuno: OpcionMenu[];
 }) {
   const [iniciado, setIniciado] = useState(false);
   const [paso, setPaso] = useState(0);
-  const [cantidad, setCantidad] = useState(5);
-  const [comidas, setComidas] = useState<ComidaSlot[]>(
-    Array.from({ length: MAX_COMIDAS }, () => ({ ...comidaVacia }))
-  );
+  const [cantidad, setCantidad] = useState(1);
+  const [modo, setModo] = useState<ModoPedido>("racion");
+  const [comidas, setComidas] = useState<ComidaSlot[]>([{ ...comidaVacia }]);
   const [nombre, setNombre] = useState("");
   const [telefono, setTelefono] = useState("");
   const [direccion, setDireccion] = useState("");
@@ -85,12 +140,34 @@ export function PedidoWizard({
   const [enviando, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [enviado, setEnviado] = useState(false);
+  const [resumenVisitado, setResumenVisitado] = useState(false);
 
-  const totalPasos = cantidad + 3; // cantidad selector + N comidas + entrega + resumen
+  const totalPasos = cantidad + 4; // cantidad + modo + N comidas + entrega + resumen
   const esPasoCantidad = paso === 0;
-  const esPasoComida = paso >= 1 && paso <= cantidad;
-  const esPasoEntrega = paso === cantidad + 1;
-  const esPasoResumen = paso === cantidad + 2;
+  const esPasoModo = paso === 1;
+  const esPasoComida = paso >= 2 && paso <= cantidad + 1;
+  const esPasoEntrega = paso === cantidad + 2;
+  const esPasoResumen = paso === cantidad + 3;
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [paso]);
+
+  function cambiarCantidad(nueva: number) {
+    const limitada = Math.max(1, nueva);
+    setCantidad(limitada);
+    setComidas((prev) => {
+      const copia = [...prev];
+      while (copia.length < limitada) copia.push({ ...comidaVacia });
+      return copia.slice(0, Math.max(limitada, copia.length));
+    });
+    setResumenVisitado(false);
+  }
+
+  function cambiarModo(nuevoModo: ModoPedido) {
+    setModo(nuevoModo);
+    setResumenVisitado(false);
+  }
 
   function actualizarComida(indice: number, cambios: Partial<ComidaSlot>) {
     setComidas((prev) =>
@@ -109,30 +186,53 @@ export function PedidoWizard({
   }
 
   function puedeAvanzar() {
-    if (esPasoCantidad) return true;
+    if (esPasoCantidad || esPasoModo) return true;
     if (esPasoComida) {
-      const c = comidas[paso - 1];
-      if (c.tipo === "desayuno") return Boolean(c.proteina);
-      return Boolean(c.proteina && c.carbohidrato);
+      const c = comidas[paso - 2];
+      if (c.tipo === "desayuno") return Boolean(c.proteinaId);
+      return Boolean(c.proteinaId && c.carbohidrato);
     }
     if (esPasoEntrega) {
-      return Boolean(nombre.trim() && telefono.trim() && direccion.trim() && diaEntrega);
+      return Boolean(
+        nombre.trim() &&
+          telefono.trim() &&
+          TELEFONO_US_REGEX.test(telefono.trim()) &&
+          direccion.trim() &&
+          diaEntrega
+      );
     }
     return true;
   }
 
   function siguiente() {
     if (!puedeAvanzar()) return;
-    setPaso((p) => Math.min(p + 1, totalPasos - 1));
+    if (resumenVisitado) {
+      setPaso(totalPasos - 1);
+      return;
+    }
+    const nuevo = Math.min(paso + 1, totalPasos - 1);
+    setPaso(nuevo);
+    if (nuevo === totalPasos - 1) setResumenVisitado(true);
   }
 
   function atras() {
     setPaso((p) => Math.max(p - 1, 0));
   }
 
+  const comidasActivas = comidas.slice(0, cantidad);
+  const total = comidasActivas.reduce(
+    (suma, c) => suma + precioComida(c, modo, proteinas, opcionesDesayuno),
+    0
+  );
+
   function enviar() {
     if (!diaEntrega) return;
     setError(null);
+
+    // Open the tab right away (synchronously, inside the click) so the
+    // browser doesn't block it as a popup; the real WhatsApp URL is
+    // assigned once the server responds.
+    const ventana = window.open("", "_blank");
 
     const datosEntrega: DatosEntrega = {
       nombre: nombre.trim(),
@@ -142,22 +242,36 @@ export function PedidoWizard({
       dia_entrega: diaEntrega,
     };
 
-    const comidasSeleccionadas: ComidaSeleccionada[] = comidas
-      .slice(0, cantidad)
-      .map((c, i) => ({
-        numero_comida: i + 1,
-        proteina: c.proteina,
-        carbohidrato: c.tipo === "desayuno" ? "Waffles" : c.carbohidrato,
-        extra: null,
-        es_desayuno: c.tipo === "desayuno",
-      }));
+    const comidasSeleccionadas: ComidaSeleccionada[] = comidasActivas.map(
+      (c, i) => {
+        const proteina = proteinas.find((p) => p.id === c.proteinaId);
+        return {
+          numero_comida: i + 1,
+          proteina: c.tipo === "desayuno" ? c.carbohidrato : proteina?.nombre ?? "",
+          carbohidrato: c.tipo === "desayuno" ? "" : c.carbohidrato,
+          vegetal: c.tipo === "desayuno" ? null : c.vegetal || null,
+          extra: c.extraActivo && c.extraValor ? c.extraValor : null,
+          gramos_proteina:
+            modo === "macro" && c.tipo !== "desayuno" ? c.gramosProteina : null,
+          gramos_carbohidrato:
+            modo === "macro" && c.tipo !== "desayuno" ? c.gramosCarbohidrato : null,
+          precio: precioComida(c, modo, proteinas, opcionesDesayuno),
+          es_desayuno: c.tipo === "desayuno",
+        };
+      }
+    );
 
     startTransition(async () => {
-      const resultado = await enviarPedido(datosEntrega, comidasSeleccionadas);
+      const resultado = await enviarPedido(datosEntrega, modo, comidasSeleccionadas);
       if (resultado.success) {
         setEnviado(true);
-        window.location.href = resultado.whatsappUrl;
+        if (ventana) {
+          ventana.location.href = resultado.whatsappUrl;
+        } else {
+          window.location.href = resultado.whatsappUrl;
+        }
       } else {
+        ventana?.close();
         setError(resultado.error);
       }
     });
@@ -170,24 +284,26 @@ export function PedidoWizard({
   return (
     <main className="min-h-screen bg-surface flex flex-col">
       <header className="flex items-center gap-3 px-4 h-16 border-b border-outline-variant/40">
-        <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
-          <UtensilsCrossed className="text-white" size={18} />
-        </div>
-        <div>
-          <h1 className="font-display text-base font-semibold text-primary leading-none">
-            JJ Healthy Food
-          </h1>
-          <p className="text-[11px] text-on-surface-variant uppercase tracking-widest mt-0.5">
-            Arma tu pedido
-          </p>
-        </div>
+        <a href="/pedido" className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
+            <UtensilsCrossed className="text-white" size={18} />
+          </div>
+          <div>
+            <h1 className="font-display text-base font-semibold text-primary leading-none">
+              JJ Healthy Food
+            </h1>
+            <p className="text-[11px] text-on-surface-variant uppercase tracking-widest mt-0.5">
+              Build Your Order
+            </p>
+          </div>
+        </a>
       </header>
 
-      {/* Progreso */}
+      {/* Progress */}
       <div className="px-4 pt-4">
         <div className="flex items-center justify-between mb-1.5">
           <span className="text-xs font-sans font-semibold text-on-surface-variant">
-            Paso {paso + 1} de {totalPasos} · {etiquetaPaso(paso, cantidad)}
+            Step {paso + 1} of {totalPasos} · {etiquetaPaso(paso, cantidad)}
           </span>
         </div>
         <div className="h-1.5 w-full bg-surface-container rounded-full overflow-hidden">
@@ -200,17 +316,21 @@ export function PedidoWizard({
 
       <div className="flex-1 px-4 py-6 max-w-lg w-full mx-auto">
         {esPasoCantidad && (
-          <PasoCantidad cantidad={cantidad} onCambiar={setCantidad} />
+          <PasoCantidad cantidad={cantidad} onCambiar={cambiarCantidad} />
         )}
+
+        {esPasoModo && <PasoModo modo={modo} onCambiar={cambiarModo} />}
 
         {esPasoComida && (
           <PasoComida
-            numero={paso}
-            comida={comidas[paso - 1]}
-            onCambiar={(cambios) => actualizarComida(paso - 1, cambios)}
+            numero={paso - 1}
+            comida={comidas[paso - 2]}
+            modo={modo}
             proteinas={proteinas}
             carbohidratos={carbohidratos}
+            vegetales={vegetales}
             opcionesDesayuno={opcionesDesayuno}
+            onCambiar={(cambios) => actualizarComida(paso - 2, cambios)}
           />
         )}
 
@@ -233,11 +353,15 @@ export function PedidoWizard({
 
         {esPasoResumen && (
           <PasoResumen
-            comidas={comidas.slice(0, cantidad)}
+            comidas={comidasActivas}
+            modo={modo}
+            proteinas={proteinas}
+            opcionesDesayuno={opcionesDesayuno}
             nombre={nombre}
             direccion={direccion}
             detalles={detalles}
             diaEntrega={diaEntrega}
+            total={total}
             onEditarPaso={setPaso}
           />
         )}
@@ -249,7 +373,7 @@ export function PedidoWizard({
         )}
       </div>
 
-      {/* Barra inferior de navegacion */}
+      {/* Bottom navigation bar */}
       <div className="sticky bottom-0 bg-surface border-t border-outline-variant/40 px-4 py-4 flex items-center gap-3">
         {paso > 0 && !enviado && (
           <button
@@ -258,7 +382,7 @@ export function PedidoWizard({
             className="flex items-center gap-1 px-4 py-3 text-on-surface-variant font-sans text-sm font-semibold"
           >
             <ChevronLeft size={18} />
-            Atrás
+            Back
           </button>
         )}
         {!esPasoResumen ? (
@@ -268,7 +392,7 @@ export function PedidoWizard({
             disabled={!puedeAvanzar()}
             className="flex-1 bg-primary text-on-primary py-3 rounded-2xl font-sans text-sm font-semibold disabled:opacity-40 active:scale-95 transition-all"
           >
-            Siguiente
+            {resumenVisitado ? "Back to summary" : "Next"}
           </button>
         ) : (
           <button
@@ -279,10 +403,10 @@ export function PedidoWizard({
           >
             <Send size={18} />
             {enviando
-              ? "Enviando..."
+              ? "Sending..."
               : enviado
-                ? "Redirigiendo a WhatsApp..."
-                : "Enviar pedido por WhatsApp"}
+                ? "Done! Check the WhatsApp tab"
+                : "Send order via WhatsApp"}
           </button>
         )}
       </div>
@@ -301,23 +425,84 @@ function PasoCantidad({
     <div className="space-y-8">
       <div>
         <h2 className="font-display text-2xl font-semibold text-on-surface">
-          ¿Cuántas comidas quieres?
+          How many meals do you want?
         </h2>
         <p className="text-on-surface-variant font-sans text-sm mt-1">
-          Elige entre 1 y {MAX_COMIDAS} comidas. En el siguiente paso decides,
-          una por una, si cada comida es regular o desayuno.
+          Choose how many meals for this order.
         </p>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {Array.from({ length: MAX_COMIDAS }, (_, i) => i + 1).map((n) => (
-          <Chip
-            key={n}
-            label={String(n)}
-            selected={cantidad === n}
-            onClick={() => onCambiar(n)}
-          />
-        ))}
+      <div className="flex items-center justify-center gap-6">
+        <button
+          type="button"
+          onClick={() => onCambiar(cantidad - 1)}
+          disabled={cantidad <= 1}
+          className="w-12 h-12 rounded-full bg-surface-container-lowest border border-outline-variant flex items-center justify-center disabled:opacity-30 active:scale-95 transition-all"
+        >
+          <Minus size={20} />
+        </button>
+        <span className="font-display text-4xl font-semibold text-primary w-16 text-center">
+          {cantidad}
+        </span>
+        <button
+          type="button"
+          onClick={() => onCambiar(cantidad + 1)}
+          className="w-12 h-12 rounded-full bg-primary text-on-primary flex items-center justify-center active:scale-95 transition-all"
+        >
+          <Plus size={20} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function PasoModo({
+  modo,
+  onCambiar,
+}: {
+  modo: ModoPedido;
+  onCambiar: (m: ModoPedido) => void;
+}) {
+  return (
+    <div className="space-y-8">
+      <div>
+        <h2 className="font-display text-2xl font-semibold text-on-surface">
+          How do you want your meals?
+        </h2>
+        <p className="text-on-surface-variant font-sans text-sm mt-1">
+          This applies to every meal in this order.
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        <button
+          type="button"
+          onClick={() => onCambiar("racion")}
+          className={`w-full text-left p-4 rounded-2xl border-2 transition-colors ${
+            modo === "racion"
+              ? "border-primary bg-primary/10"
+              : "border-outline-variant bg-surface-container-lowest"
+          }`}
+        >
+          <p className="font-sans font-semibold text-on-surface">By Portion</p>
+          <p className="text-sm text-on-surface-variant mt-0.5">
+            Standard portion of protein, carb, and veggie.
+          </p>
+        </button>
+        <button
+          type="button"
+          onClick={() => onCambiar("macro")}
+          className={`w-full text-left p-4 rounded-2xl border-2 transition-colors ${
+            modo === "macro"
+              ? "border-primary bg-primary/10"
+              : "border-outline-variant bg-surface-container-lowest"
+          }`}
+        >
+          <p className="font-sans font-semibold text-on-surface">Macro</p>
+          <p className="text-sm text-on-surface-variant mt-0.5">
+            Adjustable protein amount for your macros.
+          </p>
+        </button>
       </div>
     </div>
   );
@@ -326,61 +511,72 @@ function PasoCantidad({
 function PasoComida({
   numero,
   comida,
-  onCambiar,
+  modo,
   proteinas,
   carbohidratos,
+  vegetales,
   opcionesDesayuno,
+  onCambiar,
 }: {
   numero: number;
   comida: ComidaSlot;
-  onCambiar: (cambios: Partial<ComidaSlot>) => void;
-  proteinas: string[];
+  modo: ModoPedido;
+  proteinas: OpcionMenu[];
   carbohidratos: string[];
-  opcionesDesayuno: string[];
+  vegetales: string[];
+  opcionesDesayuno: OpcionMenu[];
+  onCambiar: (cambios: Partial<ComidaSlot>) => void;
 }) {
   const esDesayuno = comida.tipo === "desayuno";
+  const sencillas = proteinas.filter((p) => p.nivel === "sencilla");
+  const premium = proteinas.filter((p) => p.nivel === "premium");
 
   return (
     <div className="space-y-8">
       <div>
         <h2 className="font-display text-2xl font-semibold text-on-surface">
-          Comida {numero}
+          Meal {numero}
         </h2>
         <p className="text-on-surface-variant font-sans text-sm mt-1">
-          Elige el tipo de comida y luego arma sus ingredientes.
+          Choose the meal type, then build your ingredients.
         </p>
       </div>
 
       <div>
         <p className="font-sans text-xs font-bold text-on-surface-variant uppercase mb-3">
-          Tipo de comida
+          Meal type
         </p>
         <div className="flex gap-2">
           <Chip
-            label="Comida regular"
+            label={modo === "macro" ? "Macro meal" : "Regular meal"}
             selected={comida.tipo === "regular"}
-            onClick={() => onCambiar({ tipo: "regular", proteina: "" })}
+            onClick={() => onCambiar({ tipo: "regular", proteinaId: "" })}
           />
           <Chip
-            label="Desayuno"
+            label="Breakfast"
             selected={esDesayuno}
-            onClick={() => onCambiar({ tipo: "desayuno", proteina: "" })}
+            onClick={() => onCambiar({ tipo: "desayuno", proteinaId: "" })}
           />
         </div>
       </div>
 
       {esDesayuno ? (
         <div>
-          <p className="font-sans text-xs font-bold text-on-surface-variant uppercase mb-3">
-            Elige tu desayuno
-          </p>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex items-center gap-2 mb-3">
+            <p className="font-sans text-xs font-bold uppercase tracking-wide text-secondary">
+              Choose your breakfast
+            </p>
+            <span className="font-sans text-xs font-bold text-secondary">
+              ${Number(opcionesDesayuno[0]?.precio_racion) || 7}
+            </span>
+          </div>
+          <div className="flex flex-col gap-2">
             {opcionesDesayuno.map((o) => (
               <Chip
-                key={o}
-                label={o}
-                selected={comida.proteina === o}
-                onClick={() => onCambiar({ proteina: o })}
+                key={o.id}
+                label={o.nombre}
+                selected={comida.carbohidrato === o.nombre}
+                onClick={() => onCambiar({ carbohidrato: o.nombre, proteinaId: o.nombre })}
               />
             ))}
           </div>
@@ -388,16 +584,39 @@ function PasoComida({
       ) : (
         <>
           <div>
-            <p className="font-sans text-xs font-bold text-on-surface-variant uppercase mb-3">
-              Proteína
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {proteinas.map((p) => (
+            <div className="flex items-center gap-2 mb-2">
+              <p className="font-sans text-xs font-bold uppercase tracking-wide text-secondary">
+                Protein · Standard
+              </p>
+              <span className="font-sans text-xs font-bold text-secondary">
+                ${modo === "macro" ? (Number(sencillas[0]?.precio_macro_gramo) || PRECIOS_MACRO.sencilla) : (Number(sencillas[0]?.precio_racion) || 0)}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2 mb-4">
+              {sencillas.map((p) => (
                 <Chip
-                  key={p}
-                  label={p}
-                  selected={comida.proteina === p}
-                  onClick={() => onCambiar({ proteina: p })}
+                  key={p.id}
+                  label={p.nombre}
+                  selected={comida.proteinaId === p.id}
+                  onClick={() => onCambiar({ proteinaId: p.id })}
+                />
+              ))}
+            </div>
+            <div className="flex items-center gap-2 mb-2">
+              <p className="font-sans text-xs font-bold uppercase tracking-wide text-tertiary">
+                Protein · Premium
+              </p>
+              <span className="font-sans text-xs font-bold text-tertiary">
+                ${modo === "macro" ? (Number(premium[0]?.precio_macro_gramo) || PRECIOS_MACRO.premium) : (Number(premium[0]?.precio_racion) || 0)}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {premium.map((p) => (
+                <Chip
+                  key={p.id}
+                  label={p.nombre}
+                  selected={comida.proteinaId === p.id}
+                  onClick={() => onCambiar({ proteinaId: p.id })}
                 />
               ))}
             </div>
@@ -405,7 +624,7 @@ function PasoComida({
 
           <div>
             <p className="font-sans text-xs font-bold text-on-surface-variant uppercase mb-3">
-              Carbohidrato
+              Carb
             </p>
             <div className="flex flex-wrap gap-2">
               {carbohidratos.map((c) => (
@@ -419,13 +638,194 @@ function PasoComida({
             </div>
           </div>
 
+          <div>
+            <p className="font-sans text-xs font-bold text-on-surface-variant uppercase mb-3">
+              Veggie (optional)
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {vegetales.map((v) => (
+                <Chip
+                  key={v}
+                  label={v}
+                  selected={comida.vegetal === v}
+                  onClick={() =>
+                    onCambiar({ vegetal: comida.vegetal === v ? "" : v })
+                  }
+                />
+              ))}
+            </div>
+          </div>
+
           <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-primary/10 text-primary">
             <Leaf size={18} className="shrink-0" />
             <p className="font-sans text-sm">
-              Todas las comidas vienen acompañadas de vegetales.
+              Includes 1 protein, 1 carb, and 1 veggie.
             </p>
           </div>
+
+          {modo === "macro" && (
+            <div className="bg-surface-container-low rounded-2xl p-5 space-y-5">
+              <div className="flex items-center justify-between">
+                <span className="font-sans text-xs font-bold text-on-surface-variant uppercase">
+                  Protein
+                </span>
+                <div className="flex items-center gap-4">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onCambiar({
+                        gramosProteina: Math.max(0, comida.gramosProteina - 25),
+                      })
+                    }
+                    className="w-8 h-8 rounded-full border border-outline-variant text-on-surface-variant flex items-center justify-center hover:bg-surface-container-highest active:scale-95 transition-all"
+                  >
+                    <Minus size={14} />
+                  </button>
+                  <span className="font-sans text-lg font-semibold text-on-surface w-16 text-center">
+                    {comida.gramosProteina}
+                    <span className="text-xs font-normal text-on-surface-variant ml-0.5">g</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onCambiar({
+                        gramosProteina: comida.gramosProteina + 25,
+                      })
+                    }
+                    className="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center hover:opacity-90 active:scale-95 transition-all"
+                  >
+                    <Plus size={14} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="h-px bg-outline-variant/50" />
+
+              <div className="flex items-center justify-between">
+                <span className="font-sans text-xs font-bold text-on-surface-variant uppercase">
+                  Carb
+                </span>
+                <div className="flex items-center gap-4">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onCambiar({
+                        gramosCarbohidrato: Math.max(0, comida.gramosCarbohidrato - 25),
+                      })
+                    }
+                    className="w-8 h-8 rounded-full border border-outline-variant text-on-surface-variant flex items-center justify-center hover:bg-surface-container-highest active:scale-95 transition-all"
+                  >
+                    <Minus size={14} />
+                  </button>
+                  <span className="font-sans text-lg font-semibold text-on-surface w-16 text-center">
+                    {comida.gramosCarbohidrato}
+                    <span className="text-xs font-normal text-on-surface-variant ml-0.5">g</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onCambiar({
+                        gramosCarbohidrato: comida.gramosCarbohidrato + 25,
+                      })
+                    }
+                    className="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center hover:opacity-90 active:scale-95 transition-all"
+                  >
+                    <Plus size={14} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <ExtraToggle
+            comida={comida}
+            onCambiar={onCambiar}
+            proteinas={proteinas}
+            carbohidratos={carbohidratos}
+            vegetales={vegetales}
+          />
         </>
+      )}
+    </div>
+  );
+}
+
+function ExtraToggle({
+  comida,
+  onCambiar,
+  proteinas,
+  carbohidratos,
+  vegetales,
+}: {
+  comida: ComidaSlot;
+  onCambiar: (cambios: Partial<ComidaSlot>) => void;
+  proteinas: OpcionMenu[];
+  carbohidratos: string[];
+  vegetales: string[];
+}) {
+  return (
+    <div>
+      <label className="flex items-center justify-between cursor-pointer mb-3">
+        <span className="font-sans text-xs font-bold text-on-surface-variant uppercase">
+          Add something extra?
+        </span>
+        <input
+          type="checkbox"
+          checked={comida.extraActivo}
+          onChange={(e) =>
+            onCambiar({ extraActivo: e.target.checked, extraValor: "" })
+          }
+          className="w-5 h-5 rounded text-secondary focus:ring-secondary"
+        />
+      </label>
+      {comida.extraActivo && (
+        <div className="space-y-3">
+          <div>
+            <p className="text-[11px] text-on-surface-variant uppercase mb-1.5">
+              Another protein
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {proteinas.map((p) => (
+                <Chip
+                  key={p.id}
+                  label={p.nombre}
+                  selected={comida.extraValor === p.nombre}
+                  onClick={() => onCambiar({ extraValor: p.nombre })}
+                />
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="text-[11px] text-on-surface-variant uppercase mb-1.5">
+              Another carb
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {carbohidratos.map((c) => (
+                <Chip
+                  key={c}
+                  label={c}
+                  selected={comida.extraValor === c}
+                  onClick={() => onCambiar({ extraValor: c })}
+                />
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="text-[11px] text-on-surface-variant uppercase mb-1.5">
+              Another veggie
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {vegetales.map((v) => (
+                <Chip
+                  key={v}
+                  label={v}
+                  selected={comida.extraValor === v}
+                  onClick={() => onCambiar({ extraValor: v })}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -458,60 +858,68 @@ function PasoEntrega({
   onDetallesChange: (v: string) => void;
   onDiaChange: (v: DiaEntrega) => void;
 }) {
+  const telefonoInvalido =
+    telefono.trim().length > 0 && !TELEFONO_US_REGEX.test(telefono.trim());
+
   return (
     <div className="space-y-6">
       <div>
         <h2 className="font-display text-2xl font-semibold text-on-surface">
-          Datos de entrega
+          Delivery details
         </h2>
         <p className="text-on-surface-variant font-sans text-sm mt-1">
-          Los necesitamos para coordinar tu entrega.
+          We need these to coordinate your delivery.
         </p>
       </div>
 
       {bienvenidaClienta && (
         <p className="text-sm font-sans text-primary bg-primary/10 rounded-xl px-4 py-3">
-          ¡Bienvenida de nuevo, {bienvenidaClienta}! Ya llenamos tus datos.
+          Welcome back, {bienvenidaClienta}! We&apos;ve filled in your info.
         </p>
       )}
 
       <div className="space-y-2">
         <label className="font-sans text-xs font-bold text-on-surface-variant uppercase">
-          Teléfono
+          Phone
         </label>
         <input
           type="tel"
           value={telefono}
           onChange={(e) => onTelefonoChange(e.target.value)}
           onBlur={onTelefonoBlur}
-          placeholder="0412-1234567"
+          placeholder="(555) 123-4567"
           className="w-full h-12 px-4 bg-surface-container-lowest border border-outline-variant rounded-xl font-sans focus:ring-2 focus:ring-primary outline-none"
         />
+        {telefonoInvalido && (
+          <p className="text-xs text-error font-sans">
+            Please enter a valid US phone number.
+          </p>
+        )}
       </div>
 
       <div className="space-y-2">
         <label className="font-sans text-xs font-bold text-on-surface-variant uppercase">
-          Nombre
+          Name
         </label>
         <input
           type="text"
           value={nombre}
           onChange={(e) => onNombreChange(e.target.value)}
-          placeholder="Tu nombre completo"
+          placeholder="Your full name"
           className="w-full h-12 px-4 bg-surface-container-lowest border border-outline-variant rounded-xl font-sans focus:ring-2 focus:ring-primary outline-none"
         />
       </div>
 
       <div className="space-y-2">
         <label className="font-sans text-xs font-bold text-on-surface-variant uppercase">
-          Dirección
+          Address
         </label>
         <div className="relative">
           <MapPin size={18} className="absolute left-4 top-4 text-outline" />
           <textarea
             value={direccion}
             onChange={(e) => onDireccionChange(e.target.value)}
-            placeholder="Calle, casa/apto, urbanización, zona"
+            placeholder="Street address, Apt/Unit, City, State, ZIP"
             rows={2}
             className="w-full pl-11 pr-4 py-3 bg-surface-container-lowest border border-outline-variant rounded-xl font-sans focus:ring-2 focus:ring-primary outline-none resize-none"
           />
@@ -520,12 +928,12 @@ function PasoEntrega({
 
       <div className="space-y-2">
         <label className="font-sans text-xs font-bold text-on-surface-variant uppercase">
-          Detalles adicionales (opcional)
+          Additional details (optional)
         </label>
         <textarea
           value={detalles}
           onChange={(e) => onDetallesChange(e.target.value)}
-          placeholder="Punto de referencia, portón, instrucciones para el repartidor..."
+          placeholder="Landmark, gate code, delivery instructions..."
           rows={2}
           className="w-full px-4 py-3 bg-surface-container-lowest border border-outline-variant rounded-xl font-sans focus:ring-2 focus:ring-primary outline-none resize-none"
         />
@@ -533,18 +941,18 @@ function PasoEntrega({
 
       <div className="space-y-2">
         <label className="font-sans text-xs font-bold text-on-surface-variant uppercase">
-          Día de entrega
+          Delivery day
         </label>
         <div className="flex gap-3">
           <Chip
-            label={etiquetaFecha(proximaFecha(3))}
-            selected={diaEntrega === "miercoles"}
-            onClick={() => onDiaChange("miercoles")}
+            label={etiquetaFecha(proximaFecha(0))}
+            selected={diaEntrega === "domingo"}
+            onClick={() => onDiaChange("domingo")}
           />
           <Chip
-            label={etiquetaFecha(proximaFecha(4))}
-            selected={diaEntrega === "jueves"}
-            onClick={() => onDiaChange("jueves")}
+            label={etiquetaFecha(proximaFecha(1))}
+            selected={diaEntrega === "lunes"}
+            onClick={() => onDiaChange("lunes")}
           />
         </div>
       </div>
@@ -554,57 +962,90 @@ function PasoEntrega({
 
 function PasoResumen({
   comidas,
+  modo,
+  proteinas,
+  opcionesDesayuno,
   nombre,
   direccion,
   detalles,
   diaEntrega,
+  total,
   onEditarPaso,
 }: {
   comidas: ComidaSlot[];
+  modo: ModoPedido;
+  proteinas: OpcionMenu[];
+  opcionesDesayuno: OpcionMenu[];
   nombre: string;
   direccion: string;
   detalles: string;
   diaEntrega: DiaEntrega | "";
+  total: number;
   onEditarPaso: (paso: number) => void;
 }) {
   return (
     <div className="space-y-6">
       <div>
         <h2 className="font-display text-2xl font-semibold text-on-surface">
-          Resumen de tu pedido
+          Your order summary
         </h2>
         <p className="text-on-surface-variant font-sans text-sm mt-1">
-          Revisa todo antes de enviarlo por WhatsApp.
+          Review everything before sending it via WhatsApp. Tap any card to
+          edit it.
         </p>
       </div>
 
       <div className="space-y-3">
-        {comidas.map((c, i) => (
-          <button
-            key={i}
-            type="button"
-            onClick={() => onEditarPaso(i + 1)}
-            className="w-full text-left bg-surface-container-lowest border border-outline-variant rounded-xl p-4 hover:border-primary transition-colors"
-          >
-            <p className="font-sans text-xs font-bold text-secondary uppercase mb-1">
-              Comida {i + 1} · {c.tipo === "desayuno" ? "Desayuno" : "Regular"}
-            </p>
-            <p className="font-sans text-sm text-on-surface">
-              {c.tipo === "desayuno"
-                ? c.proteina
-                : `${c.carbohidrato} + ${c.proteina}`}
-            </p>
-          </button>
-        ))}
+        {comidas.map((c, i) => {
+          const proteina = proteinas.find((p) => p.id === c.proteinaId);
+          const precio = precioComida(c, modo, proteinas, opcionesDesayuno);
+          return (
+            <button
+              key={i}
+              type="button"
+              onClick={() => onEditarPaso(i + 2)}
+              className="w-full text-left bg-surface-container-lowest border border-outline-variant rounded-xl p-4 hover:border-primary transition-colors"
+            >
+              <div className="flex justify-between items-start gap-2">
+                <p className="font-sans text-xs font-bold text-secondary uppercase mb-1 flex items-center gap-1.5">
+                  Meal {i + 1} · {c.tipo === "desayuno" ? "Breakfast" : "Regular"}
+                  <Pencil size={11} className="opacity-60" />
+                </p>
+                <p className="font-sans text-sm font-semibold text-primary shrink-0">
+                  {formatearMoneda(precio)}
+                </p>
+              </div>
+              <p className="font-sans text-sm text-on-surface">
+                {c.tipo === "desayuno"
+                  ? c.carbohidrato
+                  : `${proteina?.nombre} + ${c.carbohidrato}${c.vegetal ? ` + ${c.vegetal}` : ""}`}
+                {c.extraActivo && c.extraValor ? ` + ${c.extraValor}` : ""}
+                {modo === "macro" && c.tipo !== "desayuno"
+                  ? ` (${c.gramosProteina}g / ${c.gramosCarbohidrato}g)`
+                  : ""}
+              </p>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex justify-between items-center px-4 py-3 bg-primary/10 rounded-xl">
+        <span className="font-sans text-sm font-semibold text-primary">
+          Estimated total
+        </span>
+        <span className="font-display text-xl font-semibold text-primary">
+          {formatearMoneda(total)}
+        </span>
       </div>
 
       <button
         type="button"
-        onClick={() => onEditarPaso(comidas.length + 1)}
+        onClick={() => onEditarPaso(comidas.length + 2)}
         className="w-full text-left bg-surface-container-lowest border border-outline-variant rounded-xl p-4 hover:border-primary transition-colors"
       >
-        <p className="font-sans text-xs font-bold text-secondary uppercase mb-1">
-          Entrega
+        <p className="font-sans text-xs font-bold text-secondary uppercase mb-1 flex items-center gap-1.5">
+          Delivery
+          <Pencil size={11} className="opacity-60" />
         </p>
         <p className="font-sans text-sm text-on-surface">{nombre}</p>
         <p className="font-sans text-sm text-on-surface-variant">
@@ -617,7 +1058,7 @@ function PasoResumen({
         )}
         <p className="font-sans text-sm text-on-surface-variant">
           {diaEntrega &&
-            etiquetaFecha(proximaFecha(diaEntrega === "miercoles" ? 3 : 4))}
+            etiquetaFecha(proximaFecha(diaEntrega === "domingo" ? 0 : 1))}
         </p>
       </button>
     </div>
@@ -636,11 +1077,11 @@ function IntroScreen({ onComenzar }: { onComenzar: () => void }) {
           JJ Healthy Food
         </p>
         <h1 className="font-display text-3xl md:text-4xl font-semibold text-white text-balance mb-4">
-          Arma tu semana de comida saludable en minutos
+          Build your healthy meal week in minutes
         </h1>
         <p className="font-sans text-white/80 text-base mb-10">
-          Te ahorramos tiempo y esfuerzo: elige tus comidas, danos tu
-          dirección, y te la entregamos donde estés.
+          We save you time and effort: pick your meals, give us your address,
+          and we&apos;ll deliver wherever you are.
         </p>
 
         <div className="grid grid-cols-3 gap-3 mb-10">
@@ -648,19 +1089,21 @@ function IntroScreen({ onComenzar }: { onComenzar: () => void }) {
             <div className="w-11 h-11 rounded-full bg-white/15 flex items-center justify-center">
               <Clock className="text-white" size={20} />
             </div>
-            <span className="font-sans text-xs text-white/70">Rápido</span>
+            <span className="font-sans text-xs text-white/70">Fast</span>
           </div>
           <div className="flex flex-col items-center gap-2">
             <div className="w-11 h-11 rounded-full bg-white/15 flex items-center justify-center">
               <Leaf className="text-white" size={20} />
             </div>
-            <span className="font-sans text-xs text-white/70">Saludable</span>
+            <span className="font-sans text-xs text-white/70">Healthy</span>
           </div>
           <div className="flex flex-col items-center gap-2">
             <div className="w-11 h-11 rounded-full bg-white/15 flex items-center justify-center">
               <Truck className="text-white" size={20} />
             </div>
-            <span className="font-sans text-xs text-white/70">A tu puerta</span>
+            <span className="font-sans text-xs text-white/70">
+              To your door
+            </span>
           </div>
         </div>
 
@@ -669,7 +1112,7 @@ function IntroScreen({ onComenzar }: { onComenzar: () => void }) {
           onClick={onComenzar}
           className="bg-secondary text-on-secondary py-4 rounded-2xl font-sans text-sm font-semibold active:scale-95 transition-all"
         >
-          Comenzar mi pedido
+          Start my order
         </button>
       </div>
     </main>

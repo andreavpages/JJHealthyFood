@@ -8,7 +8,7 @@ import type {
 
 export async function crearPedido(
   supabase: SupabaseClient,
-  datos: Pick<Pedido, "clienta_id" | "dia_entrega" | "precio_total"> &
+  datos: Pick<Pedido, "clienta_id" | "dia_entrega" | "precio_total" | "modo"> &
     Partial<Pick<Pedido, "notas">>
 ): Promise<Pedido> {
   const { data, error } = await supabase
@@ -140,4 +140,33 @@ export async function calcularIngresosDelMes(
 
   if (error) throw error;
   return data.reduce((total, p) => total + Number(p.precio_total), 0);
+}
+
+export async function listarPedidosPendientes(
+  supabase: SupabaseClient
+): Promise<{ id: string; clienta_nombre: string; dia_entrega: string; precio_total: number; fecha_pedido: string }[]> {
+  const { data, error } = await supabase
+    .from("pedidos")
+    .select("id, dia_entrega, precio_total, fecha_pedido, clientas(nombre)")
+    .eq("estado", "pendiente")
+    .order("fecha_pedido", { ascending: false })
+    .limit(10);
+
+  if (error) throw error;
+
+  type FilaPedidoPendiente = {
+    id: string;
+    dia_entrega: string;
+    precio_total: number;
+    fecha_pedido: string;
+    clientas: { nombre: string } | null;
+  };
+
+  return ((data ?? []) as unknown as FilaPedidoPendiente[]).map((p) => ({
+    id: p.id,
+    clienta_nombre: p.clientas?.nombre ?? "Sin nombre",
+    dia_entrega: p.dia_entrega,
+    precio_total: p.precio_total,
+    fecha_pedido: p.fecha_pedido,
+  }));
 }

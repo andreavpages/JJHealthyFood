@@ -73,7 +73,7 @@ export function LoginForm() {
                   type="email"
                   autoComplete="email"
                   required
-                  placeholder="admin@jjhealthyfood.com"
+                  placeholder="jjhealthyfood@gmail.com"
                   className="block w-full h-14 pl-12 pr-4 bg-surface-container-lowest border border-outline-variant rounded-2xl font-sans text-base focus:ring-2 focus:ring-primary focus:border-primary outline-none transition-all"
                 />
               </div>
@@ -120,7 +120,7 @@ export function LoginForm() {
 
             <div className="flex items-center justify-end">
               <a
-                href="#"
+                href="/reset-password"
                 className="font-sans text-sm font-semibold text-secondary hover:underline underline-offset-4"
               >
                 ¿Olvidó su contraseña?

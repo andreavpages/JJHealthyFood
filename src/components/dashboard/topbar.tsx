@@ -1,46 +1,33 @@
-import { Search, Bell, Settings, UtensilsCrossed } from "lucide-react";
+"use client";
+import Link from "next/link";
+import { Settings, UtensilsCrossed } from "lucide-react";
+import { NotificationsDropdown } from "./notifications-dropdown";
+import { AdminProfileDropdown } from "./admin-profile-dropdown";
+import { logout } from "@/controllers/auth.actions";
 
-export function Topbar({ adminEmail }: { adminEmail: string }) {
+interface PedidoNotificacion {
+  id: string;
+  clienta_nombre: string;
+  dia_entrega: string;
+  precio_total: number;
+  fecha_pedido: string;
+}
+
+export function Topbar({
+  adminEmail,
+  pedidosPendientes,
+}: {
+  adminEmail: string;
+  pedidosPendientes: PedidoNotificacion[];
+}) {
   return (
     <>
       {/* Barra superior de escritorio */}
-      <header className="hidden md:flex fixed top-0 left-[280px] w-[calc(100%-280px)] h-16 bg-surface border-b border-outline-variant items-center justify-between px-6 z-40">
-        <div className="relative w-full max-w-md">
-          <Search
-            size={18}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant"
-          />
-          <input
-            type="text"
-            placeholder="Buscar pedidos, clientes..."
-            className="w-full bg-surface-container border-none rounded-full py-2 pl-10 pr-4 text-sm font-sans focus:ring-2 focus:ring-primary transition-all outline-none"
-          />
-        </div>
+      <header className="hidden md:flex fixed top-0 left-[280px] w-[calc(100%-280px)] h-16 bg-surface border-b border-outline-variant items-center justify-end px-6 z-40">
         <div className="flex items-center gap-4">
-          <button
-            type="button"
-            className="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors"
-          >
-            <Bell size={20} />
-          </button>
-          <button
-            type="button"
-            className="w-10 h-10 flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors"
-          >
-            <Settings size={20} />
-          </button>
+          <NotificationsDropdown pedidosIniciales={pedidosPendientes} />
           <div className="h-8 w-px bg-outline-variant mx-2" />
-          <div className="flex items-center gap-3">
-            <div className="text-right">
-              <p className="font-sans text-sm text-on-surface">Admin JJ</p>
-              <p className="text-[10px] text-on-surface-variant uppercase">
-                {adminEmail}
-              </p>
-            </div>
-            <div className="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center text-white font-bold">
-              {adminEmail.charAt(0).toUpperCase()}
-            </div>
-          </div>
+          <AdminProfileDropdown adminEmail={adminEmail} logout={logout} />
         </div>
       </header>
 
@@ -54,12 +41,15 @@ export function Topbar({ adminEmail }: { adminEmail: string }) {
             JJ Healthy Food
           </h1>
         </div>
-        <button
-          type="button"
-          className="w-10 h-10 rounded-full flex items-center justify-center text-primary hover:bg-surface-container-high transition-colors"
-        >
-          <Bell size={20} />
-        </button>
+        <div className="flex items-center gap-2">
+          <NotificationsDropdown pedidosIniciales={pedidosPendientes} />
+          <Link
+            href="/dashboard/configuracion"
+            className="w-10 h-10 rounded-full flex items-center justify-center text-primary hover:bg-surface-container-high transition-colors"
+          >
+            <Settings size={20} />
+          </Link>
+        </div>
       </header>
     </>
   );

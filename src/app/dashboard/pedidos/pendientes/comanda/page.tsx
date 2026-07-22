@@ -9,7 +9,7 @@ export default async function ComandasPendientesPage() {
   const pedidos = await listarPedidosPendientesParaComanda(supabase);
 
   return (
-    <div className="min-h-screen bg-surface-container-low py-8 px-4 print:bg-white print:p-0">
+    <div className="min-h-screen bg-surface-container-low py-8 px-4 print:bg-white print:p-0 print:min-h-0">
       {pedidos.length > 0 && <AutoPrint />}
       <div className="max-w-sm mx-auto print:max-w-none">
         <div className="print:hidden mb-4 flex flex-col items-center gap-2">
@@ -25,16 +25,15 @@ export default async function ComandasPendientesPage() {
             No hay pedidos pendientes por imprimir.
           </p>
         ) : (
-          <>
-            <div className="space-y-6 print:space-y-0 print:grid print:grid-cols-2 print:gap-x-4 print:gap-y-4 print:items-start">
-              {pedidos.map((pedido) => (
-                <ComandaTicket key={pedido.id} pedido={pedido} />
-              ))}
-            </div>
-            <p className="text-center font-sans text-xs text-on-surface-variant/60 print:text-black/40 mt-6">
-              — sin más pedidos pendientes —
-            </p>
-          </>
+          <div className="space-y-2 print:space-y-0 print:grid print:grid-cols-2 print:gap-x-4 print:gap-y-2 print:items-start">
+            {pedidos.map((pedido, index) => (
+              <ComandaTicket
+                key={pedido.id}
+                pedido={pedido}
+                showSeparator={index < pedidos.length - 1}
+              />
+            ))}
+          </div>
         )}
       </div>
     </div>
