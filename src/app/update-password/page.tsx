@@ -1,20 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { UpdatePasswordForm } from "@/components/update-password-form";
 
-export default function UpdatePasswordPage() {
+function UpdatePasswordContent() {
   const searchParams = useSearchParams();
   const code = searchParams.get("code");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Boolean(code));
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    if (!code) {
-      setLoading(false);
-      return;
-    }
+    if (!code) return;
 
     fetch(`/api/auth/callback?code=${code}`)
       .then((res) => {
@@ -53,4 +50,18 @@ export default function UpdatePasswordPage() {
   }
 
   return <UpdatePasswordForm />;
+}
+
+export default function UpdatePasswordPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen flex items-center justify-center bg-surface">
+          <p className="font-sans text-on-surface-variant">Cargando...</p>
+        </main>
+      }
+    >
+      <UpdatePasswordContent />
+    </Suspense>
+  );
 }
