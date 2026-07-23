@@ -1,5 +1,8 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
-import { MapPin, Printer, ChevronLeft, ChevronRight } from "lucide-react";
+import { MapPin, Printer, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import type { PedidoConDetalle } from "@/models/types";
 import { EstadoSelector } from "./estado-selector";
 import { PrecioEditor } from "./precio-editor";
@@ -49,17 +52,48 @@ export function PedidosRecientes({
   pedidos: PedidoConDetalle[];
   total: number;
 }) {
+  const [busqueda, setBusqueda] = useState("");
+
+  const filtrados = pedidos.filter((pedido) => {
+    const termino = busqueda.trim().toLowerCase();
+    if (!termino) return true;
+    return (
+      (pedido.clientas?.nombre ?? "").toLowerCase().includes(termino) ||
+      pedido.id.slice(0, 5).toLowerCase().includes(termino) ||
+      (pedido.clientas?.zona_entrega ?? "").toLowerCase().includes(termino) ||
+      (pedido.clientas?.direccion ?? "").toLowerCase().includes(termino) ||
+      detalleComidas(pedido).toLowerCase().includes(termino)
+    );
+  });
+
   return (
     <div className="bg-surface-container-lowest rounded-2xl border border-outline-variant shadow-sm overflow-hidden">
-      <div className="px-4 md:px-6 py-5 border-b border-outline-variant">
+      <div className="px-4 md:px-6 py-5 border-b border-outline-variant flex flex-col md:flex-row md:items-center gap-4 md:justify-between">
         <h3 className="font-display text-xl font-semibold text-on-surface">
           Pedidos Recientes
         </h3>
+        <div className="relative w-full md:max-w-xs">
+          <Search
+            size={16}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-outline"
+          />
+          <input
+            type="text"
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+            placeholder="Buscar por cliente, ID o ubicación..."
+            className="w-full h-10 pl-9 pr-3 bg-surface-container-low border border-outline-variant rounded-full text-sm font-sans focus:ring-2 focus:ring-primary outline-none transition-all"
+          />
+        </div>
       </div>
 
       {pedidos.length === 0 ? (
         <div className="p-10 text-center text-on-surface-variant font-sans">
           Aún no hay pedidos registrados.
+        </div>
+      ) : filtrados.length === 0 ? (
+        <div className="p-10 text-center text-on-surface-variant font-sans">
+          Ningún pedido coincide con esa búsqueda.
         </div>
       ) : (
         <>
@@ -89,7 +123,7 @@ export function PedidosRecientes({
                 </tr>
               </thead>
               <tbody className="divide-y divide-outline-variant">
-                {pedidos.map((pedido, i) => (
+                {filtrados.map((pedido, i) => (
                   <tr
                     key={pedido.id}
                     className="hover:bg-surface-bright transition-colors"
@@ -106,7 +140,7 @@ export function PedidosRecientes({
                             {pedido.clientas?.nombre ?? "Clienta eliminada"}
                           </p>
                           <p className="text-xs text-on-surface-variant">
-                            ID: #{pedido.id.slice(0, 8).toUpperCase()}
+                            ID: #{pedido.id.slice(0, 5).toUpperCase()}
                           </p>
                         </div>
                       </div>
@@ -147,7 +181,7 @@ export function PedidosRecientes({
 
           {/* Tarjetas (movil) */}
           <div className="md:hidden divide-y divide-outline-variant/40">
-            {pedidos.map((pedido) => (
+            {filtrados.map((pedido) => (
               <div key={pedido.id} className="p-4 space-y-3">
                 <div className="flex justify-between items-start">
                   <div className="flex flex-col">
@@ -181,7 +215,9 @@ export function PedidosRecientes({
 
       <div className="px-4 md:px-6 py-4 bg-surface-container-low flex justify-between items-center">
         <p className="font-sans text-xs text-on-surface-variant">
-          Mostrando {pedidos.length} de {total} pedidos
+          {busqueda
+            ? `Mostrando ${filtrados.length} de ${pedidos.length} pedidos cargados`
+            : `Mostrando ${pedidos.length} de ${total} pedidos`}
         </p>
         <div className="flex items-center gap-2">
           <button

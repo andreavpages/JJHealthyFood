@@ -94,15 +94,31 @@ function precioComida(
   }
   const proteina = proteinas.find((p) => p.id === slot.proteinaId);
   if (!proteina) return 0;
+  let base = 0;
   if (modo === "macro") {
     const precioBD = Number(proteina.precio_macro_gramo);
-    if (!isNaN(precioBD) && precioBD > 0) return precioBD;
-    const fallback = proteina.nivel ? PRECIOS_MACRO[proteina.nivel] : undefined;
-    return fallback ?? 0;
+    if (!isNaN(precioBD) && precioBD > 0) base = precioBD;
+    else {
+      const fallback = proteina.nivel ? PRECIOS_MACRO[proteina.nivel] : undefined;
+      base = fallback ?? 0;
+    }
+  } else {
+    const precioBD = Number(proteina.precio_racion);
+    if (!isNaN(precioBD) && precioBD > 0) base = precioBD;
   }
-  const precioBD = Number(proteina.precio_racion);
-  if (!isNaN(precioBD) && precioBD > 0) return precioBD;
-  return 0;
+
+  let extra = 0;
+  if (slot.extraActivo && slot.extraValor) {
+    const extraEsProteina = proteinas.some((p) => p.nombre === slot.extraValor);
+    if (extraEsProteina) {
+      const nivel = proteinas.find((p) => p.nombre === slot.extraValor)?.nivel;
+      extra = nivel === "premium" ? 2 : 1;
+    } else {
+      extra = 0.5;
+    }
+  }
+
+  return base + extra;
 }
 
 function etiquetaPaso(paso: number, cantidad: number) {
@@ -566,15 +582,12 @@ function PasoComida({
             <p className="font-sans text-xs font-bold uppercase tracking-wide text-secondary">
               Choose your breakfast
             </p>
-            <span className="font-sans text-xs font-bold text-secondary">
-              ${Number(opcionesDesayuno[0]?.precio_racion) || 7}
-            </span>
           </div>
           <div className="flex flex-col gap-2">
             {opcionesDesayuno.map((o) => (
               <Chip
                 key={o.id}
-                label={o.nombre}
+                label={`${o.nombre} — $${Number(o.precio_racion) || 7}`}
                 selected={comida.carbohidrato === o.nombre}
                 onClick={() => onCambiar({ carbohidrato: o.nombre, proteinaId: o.nombre })}
               />
@@ -782,13 +795,13 @@ function ExtraToggle({
         <div className="space-y-3">
           <div>
             <p className="text-[11px] text-on-surface-variant uppercase mb-1.5">
-              Another protein
+              Another protein <span className="text-primary">(+ $1 - $2)</span>
             </p>
             <div className="flex flex-wrap gap-2">
               {proteinas.map((p) => (
                 <Chip
                   key={p.id}
-                  label={p.nombre}
+                  label={`${p.nombre} (+ $${p.nivel === "premium" ? "2" : "1"})`}
                   selected={comida.extraValor === p.nombre}
                   onClick={() => onCambiar({ extraValor: p.nombre })}
                 />
@@ -797,13 +810,13 @@ function ExtraToggle({
           </div>
           <div>
             <p className="text-[11px] text-on-surface-variant uppercase mb-1.5">
-              Another carb
+              Another carb <span className="text-primary">(+ $0.50)</span>
             </p>
             <div className="flex flex-wrap gap-2">
               {carbohidratos.map((c) => (
                 <Chip
                   key={c}
-                  label={c}
+                  label={`${c} (+ $0.50)`}
                   selected={comida.extraValor === c}
                   onClick={() => onCambiar({ extraValor: c })}
                 />
@@ -812,7 +825,7 @@ function ExtraToggle({
           </div>
           <div>
             <p className="text-[11px] text-on-surface-variant uppercase mb-1.5">
-              Another veggie
+              Another veggie <span className="text-secondary">free</span>
             </p>
             <div className="flex flex-wrap gap-2">
               {vegetales.map((v) => (

@@ -181,14 +181,19 @@ function ChipSimple({
   opcion,
   onQuitar,
   pending,
+  esDesayuno = false,
 }: {
   opcion: OpcionMenu;
   onQuitar: () => void;
   pending: boolean;
+  esDesayuno?: boolean;
 }) {
   return (
-    <span className="inline-flex items-center gap-1.5 pl-3 pr-1.5 py-2 rounded-xl bg-surface-container-low border border-outline-variant font-sans text-sm text-on-surface">
-      {opcion.nombre}
+    <div className="inline-flex items-center gap-2 pl-3 pr-1.5 py-2 rounded-xl bg-surface-container-low border border-outline-variant">
+      <span className="font-sans text-sm text-on-surface font-medium">
+        {opcion.nombre}
+      </span>
+      {esDesayuno && <PrecioRacionEditor opcion={opcion} />}
       <button
         type="button"
         onClick={onQuitar}
@@ -198,7 +203,7 @@ function ChipSimple({
       >
         <X size={12} />
       </button>
-    </span>
+    </div>
   );
 }
 
@@ -220,6 +225,7 @@ export function MenuCategoria({
   const [nivel, setNivel] = useState<NivelProteina>("sencilla");
   const [precioRacion, setPrecioRacion] = useState("9");
   const [precioMacro, setPrecioMacro] = useState("12");
+  const [precioDesayuno, setPrecioDesayuno] = useState("7");
   const [pending, startTransition] = useTransition();
 
   const sencillas = opciones.filter((o) => o.nivel === "sencilla");
@@ -247,6 +253,10 @@ export function MenuCategoria({
           nivel,
           precioRacion: tab === "racion" ? precio || 0 : Number(preciosDefault[nivel].racion),
           precioMacroGramo: tab === "macro" ? precio || 0 : Number(preciosDefault[nivel].macro),
+        });
+      } else if (categoria === "desayuno") {
+        await crearOpcionMenu(categoria, nombre, {
+          precioRacion: Number(precioDesayuno) || 7,
         });
       } else {
         await crearOpcionMenu(categoria, nombre);
@@ -453,6 +463,7 @@ export function MenuCategoria({
                 opcion={o}
                 onQuitar={() => quitar(o.id)}
                 pending={pending}
+                esDesayuno={categoria === "desayuno"}
               />
             ))}
           </div>
@@ -470,6 +481,20 @@ export function MenuCategoria({
                 disabled={pending}
                 className="flex-1 min-w-[140px] h-10 px-3 bg-surface-container-low border border-outline-variant rounded-xl font-sans text-sm focus:ring-2 focus:ring-primary outline-none"
               />
+              {categoria === "desayuno" && (
+                <div className="flex items-center gap-1">
+                  <span className="text-xs text-on-surface-variant font-sans">precio</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step="1"
+                    value={precioDesayuno}
+                    onChange={(e) => setPrecioDesayuno(e.target.value)}
+                    disabled={pending}
+                    className="w-20 h-10 px-2 bg-surface-container-low border border-outline-variant rounded-xl font-sans text-sm outline-none"
+                  />
+                </div>
+              )}
               <button
                 type="button"
                 onClick={agregar}

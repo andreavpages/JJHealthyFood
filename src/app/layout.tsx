@@ -15,6 +15,9 @@ const sourceSerif4 = Source_Serif_4({
 export const metadata: Metadata = {
   title: "JJ Healthy Food - Administración",
   description: "Panel de administración de pedidos de JJ Healthy Food",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({

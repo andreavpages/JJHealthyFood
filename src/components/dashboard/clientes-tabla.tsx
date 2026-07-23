@@ -126,7 +126,7 @@ export function ClientesTabla({
                               {clienta.nombre}
                             </div>
                             <div className="text-on-surface-variant text-xs">
-                              ID: {clienta.id.slice(0, 8).toUpperCase()}
+                              ID: {clienta.id.slice(0, 5).toUpperCase()}
                             </div>
                           </div>
                         </div>

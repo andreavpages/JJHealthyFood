@@ -1,10 +1,16 @@
 import { createClient } from "@/lib/supabase/server";
 import { Settings, Lock } from "lucide-react";
 import { CambiarClaveForm } from "@/components/dashboard/cambiar-clave-form";
+import { WhatsappNumeroForm } from "@/components/dashboard/whatsapp-numero-form";
+import { obtenerConfiguracion } from "@/models/configuracion.model";
 
 export default async function ConfiguracionPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  const whatsappNumero =
+    (await obtenerConfiguracion(supabase, "whatsapp_numero")) ??
+    process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ??
+    "";
 
   return (
     <div className="max-w-[800px] mx-auto p-4 md:p-6">
@@ -31,14 +37,7 @@ export default async function ConfiguracionPage() {
                 className="mt-1 w-full bg-surface-container border border-outline-variant rounded-xl px-4 py-3 font-sans text-on-surface focus:ring-2 focus:ring-primary outline-none"
               />
             </div>
-            <div>
-              <label className="font-sans text-sm font-medium text-on-surface">WhatsApp</label>
-              <input
-                type="text"
-                defaultValue="+584242486237"
-                className="mt-1 w-full bg-surface-container border border-outline-variant rounded-xl px-4 py-3 font-sans text-on-surface focus:ring-2 focus:ring-primary outline-none"
-              />
-            </div>
+            <WhatsappNumeroForm numeroActual={whatsappNumero} />
           </div>
         </div>
 

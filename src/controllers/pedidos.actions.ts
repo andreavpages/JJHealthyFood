@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { crearPedido } from "@/models/pedidos.model";
 import { crearComidasPedido } from "@/models/comidas-pedido.model";
+import { obtenerConfiguracion } from "@/models/configuracion.model";
 import type { ComidaPedido, DiaEntrega, ModoPedido } from "@/models/types";
 
 export type DatosEntrega = {
@@ -48,6 +49,7 @@ export async function buscarClientaPorTelefono(
 }
 
 function construirMensajeWhatsapp(
+  numeroOrden: string,
   datos: DatosEntrega,
   modo: ModoPedido,
   comidas: ComidaSeleccionada[],
@@ -71,6 +73,7 @@ function construirMensajeWhatsapp(
   const modoLabel = modo === "macro" ? "Macro" : "By Portion";
 
   return (
+    `*✅ Order #${numeroOrden} received!*\n\n` +
     `Hi JJ Healthy Food! I'd like to place this order (${modoLabel}):\n\n${lineas}\n\n` +
     `*Estimated total: ${formatearMoneda(total)}*\n\n` +
     `*Delivery day:* ${diaLabel}\n` +
@@ -141,8 +144,12 @@ export async function enviarPedido(
 
     console.log("Comidas creadas OK");
 
-    const numeroNegocio = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "";
-    const mensaje = construirMensajeWhatsapp(datosEntrega, modo, comidas, total);
+    const numeroOrden = pedido.id.slice(0, 5).toUpperCase();
+    const numeroNegocio =
+      (await obtenerConfiguracion(supabase, "whatsapp_numero")) ??
+      process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ??
+      "";
+    const mensaje = construirMensajeWhatsapp(numeroOrden, datosEntrega, modo, comidas, total);
     const whatsappUrl = `https://wa.me/${numeroNegocio}?text=${encodeURIComponent(mensaje)}`;
 
     console.log("=== PEDIDO COMPLETADO ===");

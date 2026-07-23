@@ -11,14 +11,22 @@ export async function crearPedido(
   datos: Pick<Pedido, "clienta_id" | "dia_entrega" | "precio_total" | "modo"> &
     Partial<Pick<Pedido, "notas">>
 ): Promise<Pedido> {
-  const { data, error } = await supabase
-    .from("pedidos")
-    .insert(datos)
-    .select()
-    .single();
+  // El publico (anon) puede insertar pero no leer pedidos (por diseno,
+  // para que nadie pueda consultar pedidos ajenos), y Postgres RLS
+  // rechaza un INSERT que pida devolver la fila (.select()) si el rol
+  // no tiene politica de SELECT que la haga visible. Por eso se genera
+  // el id aca mismo y se arma el objeto de vuelta sin volver a leerlo.
+  const id = crypto.randomUUID();
+  const { error } = await supabase.from("pedidos").insert({ id, ...datos });
 
   if (error) throw error;
-  return data as Pedido;
+  return {
+    id,
+    fecha_pedido: new Date().toISOString(),
+    estado: "pendiente" as EstadoPedido,
+    notas: datos.notas ?? null,
+    ...datos,
+  };
 }
 
 export async function listarPedidosRecientes(

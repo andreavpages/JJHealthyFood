@@ -59,7 +59,7 @@ export function ComandaTicket({
               Pedido
             </p>
             <p className="font-mono text-sm font-bold">
-              #{pedido.id.slice(0, 8).toUpperCase()}
+              #{pedido.id.slice(0, 5).toUpperCase()}
             </p>
           </div>
         </div>
