@@ -600,10 +600,10 @@ function PasoComida({
         <>
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <p className="font-sans text-xs font-bold uppercase tracking-wide text-secondary">
+              <p className="font-sans text-xs font-bold uppercase tracking-wide text-[#c2410c]">
                 Protein · Standard
               </p>
-              <span className="font-sans text-xs font-bold text-secondary">
+              <span className="font-sans text-xs font-bold text-[#c2410c]">
                 ${modo === "macro" ? (Number(sencillas[0]?.precio_macro_gramo) || PRECIOS_MACRO.sencilla) : (Number(sencillas[0]?.precio_racion) || 0)}
               </span>
             </div>
@@ -618,10 +618,10 @@ function PasoComida({
               ))}
             </div>
             <div className="flex items-center gap-2 mb-2">
-              <p className="font-sans text-xs font-bold uppercase tracking-wide text-tertiary">
+              <p className="font-sans text-xs font-bold uppercase tracking-wide text-green-600">
                 Protein · Premium
               </p>
-              <span className="font-sans text-xs font-bold text-tertiary">
+              <span className="font-sans text-xs font-bold text-green-600">
                 ${modo === "macro" ? (Number(premium[0]?.precio_macro_gramo) || PRECIOS_MACRO.premium) : (Number(premium[0]?.precio_racion) || 0)}
               </span>
             </div>
@@ -638,7 +638,7 @@ function PasoComida({
           </div>
 
           <div>
-            <p className="font-sans text-xs font-bold text-on-surface-variant uppercase mb-3">
+            <p className="font-sans text-xs font-bold uppercase tracking-wide text-[#b45309] mb-3">
               Carb
             </p>
             <div className="flex flex-wrap gap-2">
@@ -654,7 +654,7 @@ function PasoComida({
           </div>
 
           <div>
-            <p className="font-sans text-xs font-bold text-on-surface-variant uppercase mb-3">
+            <p className="font-sans text-xs font-bold uppercase tracking-wide text-[#15803d] mb-3">
               Veggie (optional)
             </p>
             <div className="flex flex-wrap gap-2">
@@ -796,8 +796,8 @@ function ExtraToggle({
       {comida.extraActivo && (
         <div className="space-y-3">
           <div>
-            <p className="text-[11px] text-on-surface-variant uppercase mb-1.5">
-              Another protein <span className="text-primary">(+ $1 - $2)</span>
+            <p className="text-[11px] uppercase mb-1.5 text-[#c2410c] font-bold tracking-wide">
+              Another protein <span className="text-[#c2410c]">(+ $1 - $2)</span>
             </p>
             <div className="flex flex-wrap gap-2">
               {proteinas.map((p) => (
@@ -811,8 +811,8 @@ function ExtraToggle({
             </div>
           </div>
           <div>
-            <p className="text-[11px] text-on-surface-variant uppercase mb-1.5">
-              Another carb <span className="text-primary">(+ $0.50)</span>
+            <p className="text-[11px] uppercase mb-1.5 text-green-600 font-bold tracking-wide">
+              Another carb <span className="text-green-600">(+ $0.50)</span>
             </p>
             <div className="flex flex-wrap gap-2">
               {carbohidratos.map((c) => (
@@ -826,8 +826,8 @@ function ExtraToggle({
             </div>
           </div>
           <div>
-            <p className="text-[11px] text-on-surface-variant uppercase mb-1.5">
-              Another veggie <span className="text-secondary">free</span>
+            <p className="text-[11px] uppercase mb-1.5 text-teal-600 font-bold tracking-wide">
+              Another veggie <span className="text-teal-600">free</span>
             </p>
             <div className="flex flex-wrap gap-2">
               {vegetales.map((v) => (
@@ -901,33 +901,33 @@ function PasoEntrega({
           <label className="font-sans text-xs font-bold text-on-surface-variant uppercase">
             Pickup location
           </label>
-          <div className="flex flex-wrap gap-2">
+          <div className="space-y-3">
             {sedes.map((s) => (
-              <Chip
+              <button
                 key={s.id}
-                label={s.nombre}
-                selected={sedeId === s.id}
+                type="button"
                 onClick={() => onSedeChange(s.id)}
-              />
+                className={`w-full text-left p-4 rounded-2xl border-2 transition-colors ${
+                  sedeId === s.id
+                    ? "border-primary bg-primary/10"
+                    : "border-outline-variant bg-surface-container-lowest"
+                }`}
+              >
+                <p className="font-sans text-sm text-on-surface flex items-start gap-1.5">
+                  <MapPin size={14} className="shrink-0 mt-0.5" />
+                  {s.direccion}
+                </p>
+              </button>
             ))}
           </div>
-          {sedeElegida && (
-            <p className="font-sans text-sm text-on-surface-variant flex items-start gap-1.5 pt-1">
-              <MapPin size={14} className="shrink-0 mt-0.5" />
-              {sedeElegida.direccion}
-            </p>
-          )}
         </div>
       ) : (
         sedeElegida && (
           <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-primary/10 text-primary">
             <MapPin size={18} className="shrink-0 mt-0.5" />
-            <div>
-              <p className="font-sans text-sm font-semibold">
-                Pickup location: {sedeElegida.nombre}
-              </p>
-              <p className="font-sans text-sm">{sedeElegida.direccion}</p>
-            </div>
+            <p className="font-sans text-sm font-semibold">
+              {sedeElegida.direccion}
+            </p>
           </div>
         )
       )}
@@ -1088,7 +1088,7 @@ function PasoResumen({
         <p className="font-sans text-sm text-on-surface">{nombre}</p>
         {sede && (
           <p className="font-sans text-sm text-on-surface-variant">
-            {sede.nombre} — {sede.direccion}
+            {sede.direccion}
           </p>
         )}
         {detalles && (

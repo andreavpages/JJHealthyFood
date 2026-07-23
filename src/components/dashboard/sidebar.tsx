@@ -16,7 +16,7 @@ export function Sidebar() {
 
   return (
     <aside className="hidden md:flex fixed left-0 top-0 h-full w-[280px] bg-primary flex-col py-6 z-50">
-      <div className="px-6 mb-10 flex items-center gap-3">
+      <Link href="/dashboard" className="px-6 mb-10 flex items-center gap-3 hover:opacity-80 transition-opacity">
         <div className="w-12 h-12 shrink-0 rounded-xl bg-white flex items-center justify-center overflow-hidden">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.png" alt="JJ Healthy Food" className="w-10 h-10 object-contain" />
@@ -29,7 +29,7 @@ export function Sidebar() {
             Administración
           </p>
         </div>
-      </div>
+      </Link>
 
       <nav className="flex-1 flex flex-col gap-1">
         {links.map(({ href, label, icon: Icon }) => {
