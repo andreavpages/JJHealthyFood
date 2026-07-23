@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { UtensilsCrossed, Mail, ArrowRight, CheckCircle } from "lucide-react";
+import { Mail, ArrowRight, CheckCircle } from "lucide-react";
 import { sendPasswordReset, type ResetState } from "@/controllers/auth.actions";
 
 const initialState: ResetState = { error: null, success: false };
@@ -38,8 +38,9 @@ export function ResetPasswordForm() {
       <div className="w-full md:max-w-md bg-surface-container-lowest md:rounded-3xl overflow-hidden">
         <div className="p-6 md:p-12">
           <div className="flex items-center gap-3 mb-8">
-            <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center">
-              <UtensilsCrossed className="text-white" size={26} />
+            <div className="w-12 h-12 bg-white border border-outline-variant rounded-xl flex items-center justify-center overflow-hidden">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo.png" alt="JJ Healthy Food" className="w-10 h-10 object-contain" />
             </div>
             <h1 className="font-display text-2xl font-semibold text-primary">
               JJ Healthy Food

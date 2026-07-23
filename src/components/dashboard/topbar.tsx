@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { Settings, UtensilsCrossed } from "lucide-react";
+import { Settings } from "lucide-react";
 import { NotificationsDropdown } from "./notifications-dropdown";
 import { AdminProfileDropdown } from "./admin-profile-dropdown";
 import { logout } from "@/controllers/auth.actions";
@@ -34,9 +34,8 @@ export function Topbar({
       {/* Barra superior movil */}
       <header className="md:hidden flex justify-between items-center w-full px-4 h-16 bg-surface sticky top-0 z-40">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary-container flex items-center justify-center">
-            <UtensilsCrossed className="text-white" size={20} />
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="JJ Healthy Food" className="w-10 h-10 object-contain" />
           <h1 className="font-display text-lg font-bold text-primary">
             JJ Healthy Food
           </h1>

@@ -60,8 +60,7 @@ export function PedidosRecientes({
     return (
       (pedido.clientas?.nombre ?? "").toLowerCase().includes(termino) ||
       pedido.id.slice(0, 5).toLowerCase().includes(termino) ||
-      (pedido.clientas?.zona_entrega ?? "").toLowerCase().includes(termino) ||
-      (pedido.clientas?.direccion ?? "").toLowerCase().includes(termino) ||
+      (pedido.sede_nombre ?? "").toLowerCase().includes(termino) ||
       detalleComidas(pedido).toLowerCase().includes(termino)
     );
   });
@@ -81,7 +80,7 @@ export function PedidosRecientes({
             type="text"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Buscar por cliente, ID o ubicación..."
+            placeholder="Buscar por cliente, ID o sede..."
             className="w-full h-10 pl-9 pr-3 bg-surface-container-low border border-outline-variant rounded-full text-sm font-sans focus:ring-2 focus:ring-primary outline-none transition-all"
           />
         </div>
@@ -109,7 +108,7 @@ export function PedidosRecientes({
                     Detalle del pedido
                   </th>
                   <th className="px-6 py-4 font-sans text-xs font-bold text-on-surface-variant uppercase">
-                    Ubicación
+                    Retiro en
                   </th>
                   <th className="px-6 py-4 font-sans text-xs font-bold text-on-surface-variant uppercase">
                     Precio
@@ -153,9 +152,7 @@ export function PedidosRecientes({
                     <td className="px-6 py-5">
                       <div className="flex items-center gap-1 text-on-surface-variant text-sm">
                         <MapPin size={14} />
-                        {pedido.clientas?.zona_entrega ??
-                          pedido.clientas?.direccion ??
-                          "—"}
+                        {pedido.sede_nombre ?? "—"}
                       </div>
                     </td>
                     <td className="px-6 py-5">
@@ -189,7 +186,7 @@ export function PedidosRecientes({
                       {pedido.clientas?.nombre ?? "Clienta eliminada"}
                     </span>
                     <span className="text-sm text-on-surface-variant">
-                      {pedido.clientas?.zona_entrega ?? "—"}
+                      {pedido.sede_nombre ?? "—"}
                     </span>
                   </div>
                   <EstadoSelector

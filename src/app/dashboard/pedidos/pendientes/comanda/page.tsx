@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { listarPedidosPendientesParaComanda } from "@/models/pedidos.model";
 import { BotonImprimirComanda } from "@/components/dashboard/boton-imprimir-comanda";
 import { ComandaTicket } from "@/components/dashboard/comanda-ticket";
+import { ResumenCocina } from "@/components/dashboard/resumen-cocina";
 import { AutoPrint } from "@/components/dashboard/auto-print";
 
 export default async function ComandasPendientesPage() {
@@ -25,15 +26,18 @@ export default async function ComandasPendientesPage() {
             No hay pedidos pendientes por imprimir.
           </p>
         ) : (
-          <div className="space-y-2 print:space-y-0 print:grid print:grid-cols-2 print:gap-x-4 print:gap-y-2 print:items-start">
-            {pedidos.map((pedido, index) => (
-              <ComandaTicket
-                key={pedido.id}
-                pedido={pedido}
-                showSeparator={index < pedidos.length - 1}
-              />
-            ))}
-          </div>
+          <>
+            <ResumenCocina pedidos={pedidos} />
+            <div className="space-y-2 print:space-y-0 print:grid print:grid-cols-2 print:gap-x-4 print:gap-y-2 print:items-start">
+              {pedidos.map((pedido, index) => (
+                <ComandaTicket
+                  key={pedido.id}
+                  pedido={pedido}
+                  showSeparator={index < pedidos.length - 1}
+                />
+              ))}
+            </div>
+          </>
         )}
       </div>
     </div>

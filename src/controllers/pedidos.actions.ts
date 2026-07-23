@@ -4,14 +4,15 @@ import { createClient } from "@/lib/supabase/server";
 import { crearPedido } from "@/models/pedidos.model";
 import { crearComidasPedido } from "@/models/comidas-pedido.model";
 import { obtenerConfiguracion } from "@/models/configuracion.model";
+import { listarSedesActivas } from "@/models/sedes.model";
 import type { ComidaPedido, DiaEntrega, ModoPedido } from "@/models/types";
 
 export type DatosEntrega = {
   nombre: string;
   telefono: string;
-  direccion: string;
   detalles: string;
   dia_entrega: DiaEntrega;
+  sede_id: string;
 };
 
 export type ComidaSeleccionada = Omit<ComidaPedido, "id" | "pedido_id">;
@@ -53,7 +54,9 @@ function construirMensajeWhatsapp(
   datos: DatosEntrega,
   modo: ModoPedido,
   comidas: ComidaSeleccionada[],
-  total: number
+  total: number,
+  sedeNombre: string,
+  sedeDireccion: string
 ) {
   const lineas = comidas
     .map((c) => {
@@ -76,9 +79,9 @@ function construirMensajeWhatsapp(
     `*✅ Order #${numeroOrden} received!*\n\n` +
     `Hi JJ Healthy Food! I'd like to place this order (${modoLabel}):\n\n${lineas}\n\n` +
     `*Estimated total: ${formatearMoneda(total)}*\n\n` +
-    `*Delivery day:* ${diaLabel}\n` +
-    `*Name:* ${datos.nombre}\n` +
-    `*Address:* ${datos.direccion}` +
+    `*Pickup day:* ${diaLabel}\n` +
+    `*Pickup at:* ${sedeNombre} — ${sedeDireccion}\n` +
+    `*Name:* ${datos.nombre}` +
     (datos.detalles ? `\n*Details:* ${datos.detalles}` : "")
   );
 }
@@ -97,12 +100,22 @@ export async function enviarPedido(
     console.log("Error: No hay comidas");
     return { success: false, error: "Choose at least one meal." };
   }
-  if (!datosEntrega.nombre.trim() || !datosEntrega.telefono.trim() || !datosEntrega.direccion.trim()) {
+  if (!datosEntrega.nombre.trim() || !datosEntrega.telefono.trim()) {
     console.log("Error: Faltan datos");
-    return { success: false, error: "Your delivery details are missing." };
+    return { success: false, error: "Your pickup details are missing." };
   }
 
   const supabase = await createClient();
+
+  const sedesActivas = await listarSedesActivas(supabase);
+  const sedeElegida = sedesActivas.find((s) => s.id === datosEntrega.sede_id);
+  if (!sedeElegida) {
+    console.log("Error: sede de retiro invalida o inactiva");
+    return {
+      success: false,
+      error: "Please choose a valid pickup location and try again.",
+    };
+  }
 
   console.log("Intentando upsert clienta...");
   const { data: clientaId, error: clientaError } = await supabase.rpc(
@@ -110,7 +123,6 @@ export async function enviarPedido(
     {
       p_telefono: datosEntrega.telefono,
       p_nombre: datosEntrega.nombre,
-      p_direccion: datosEntrega.direccion,
     }
   );
 
@@ -132,6 +144,8 @@ export async function enviarPedido(
       modo,
       precio_total: total,
       notas: datosEntrega.detalles.trim() || undefined,
+      sede_nombre: sedeElegida.nombre,
+      sede_direccion: sedeElegida.direccion,
     });
 
     console.log("Pedido creado:", pedido.id);
@@ -149,7 +163,15 @@ export async function enviarPedido(
       (await obtenerConfiguracion(supabase, "whatsapp_numero")) ??
       process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ??
       "";
-    const mensaje = construirMensajeWhatsapp(numeroOrden, datosEntrega, modo, comidas, total);
+    const mensaje = construirMensajeWhatsapp(
+      numeroOrden,
+      datosEntrega,
+      modo,
+      comidas,
+      total,
+      sedeElegida.nombre,
+      sedeElegida.direccion
+    );
     const whatsappUrl = `https://wa.me/${numeroNegocio}?text=${encodeURIComponent(mensaje)}`;
 
     console.log("=== PEDIDO COMPLETADO ===");

@@ -20,6 +20,16 @@ export type Pedido = {
   modo: ModoPedido;
   precio_total: number;
   notas: string | null;
+  sede_nombre: string | null;
+  sede_direccion: string | null;
+};
+
+export type SedeRetiro = {
+  id: string;
+  nombre: string;
+  direccion: string;
+  activa: boolean;
+  orden: number;
 };
 
 export type ComidaPedido = {

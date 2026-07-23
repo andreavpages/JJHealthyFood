@@ -9,7 +9,7 @@ import type {
 export async function crearPedido(
   supabase: SupabaseClient,
   datos: Pick<Pedido, "clienta_id" | "dia_entrega" | "precio_total" | "modo"> &
-    Partial<Pick<Pedido, "notas">>
+    Partial<Pick<Pedido, "notas" | "sede_nombre" | "sede_direccion">>
 ): Promise<Pedido> {
   // El publico (anon) puede insertar pero no leer pedidos (por diseno,
   // para que nadie pueda consultar pedidos ajenos), y Postgres RLS
@@ -25,6 +25,8 @@ export async function crearPedido(
     fecha_pedido: new Date().toISOString(),
     estado: "pendiente" as EstadoPedido,
     notas: datos.notas ?? null,
+    sede_nombre: datos.sede_nombre ?? null,
+    sede_direccion: datos.sede_direccion ?? null,
     ...datos,
   };
 }

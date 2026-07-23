@@ -71,14 +71,18 @@ export function ComandaTicket({
             <Campo label="Clienta" valor={pedido.clientas?.nombre ?? "—"} />
             <Campo label="Teléfono" valor={pedido.clientas?.telefono ?? "—"} />
             <Campo
-              label="Dirección"
-              valor={pedido.clientas?.direccion ?? "—"}
+              label="Retirar en"
+              valor={
+                pedido.sede_nombre
+                  ? `${pedido.sede_nombre} — ${pedido.sede_direccion ?? ""}`
+                  : "—"
+              }
             />
             {pedido.notas && <Campo label="Detalles" valor={pedido.notas} />}
 
             <div>
               <p className="text-[8px] font-bold uppercase tracking-wider text-black/50">
-                Entrega
+                Retiro
               </p>
               <span className="inline-block mt-1 bg-black text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full">
                 {diaLabel}
@@ -92,7 +96,7 @@ export function ComandaTicket({
               </span>
               <span className="flex items-center gap-1.5 text-[10px] text-black/70">
                 <span className="w-3 h-3 rounded-full border border-black/50 inline-block shrink-0" />
-                Entregado
+                Retirado
               </span>
             </div>
           </div>

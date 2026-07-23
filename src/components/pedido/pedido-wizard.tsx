@@ -2,13 +2,12 @@
 
 import { useEffect, useState, useTransition } from "react";
 import {
-  UtensilsCrossed,
   ChevronLeft,
   MapPin,
   Send,
   Clock,
   Leaf,
-  Truck,
+  Store,
   Minus,
   Plus,
   Pencil,
@@ -20,7 +19,7 @@ import {
   type ComidaSeleccionada,
   type DatosEntrega,
 } from "@/controllers/pedidos.actions";
-import type { DiaEntrega, ModoPedido, OpcionMenu } from "@/models/types";
+import type { DiaEntrega, ModoPedido, OpcionMenu, SedeRetiro } from "@/models/types";
 
 const TELEFONO_US_REGEX = /^(\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/;
 
@@ -125,7 +124,7 @@ function etiquetaPaso(paso: number, cantidad: number) {
   if (paso === 0) return "Quantity";
   if (paso === 1) return "Mode";
   if (paso <= cantidad + 1) return `Meal ${paso - 1}`;
-  if (paso === cantidad + 2) return "Delivery";
+  if (paso === cantidad + 2) return "Pickup";
   return "Summary";
 }
 
@@ -134,11 +133,13 @@ export function PedidoWizard({
   carbohidratos,
   vegetales,
   opcionesDesayuno,
+  sedes,
 }: {
   proteinas: OpcionMenu[];
   carbohidratos: string[];
   vegetales: string[];
   opcionesDesayuno: OpcionMenu[];
+  sedes: SedeRetiro[];
 }) {
   const [iniciado, setIniciado] = useState(false);
   const [paso, setPaso] = useState(0);
@@ -147,8 +148,10 @@ export function PedidoWizard({
   const [comidas, setComidas] = useState<ComidaSlot[]>([{ ...comidaVacia }]);
   const [nombre, setNombre] = useState("");
   const [telefono, setTelefono] = useState("");
-  const [direccion, setDireccion] = useState("");
   const [detalles, setDetalles] = useState("");
+  const [sedeId, setSedeId] = useState(() =>
+    sedes.length === 1 ? sedes[0].id : ""
+  );
   const [diaEntrega, setDiaEntrega] = useState<DiaEntrega | "">("");
   const [bienvenidaClienta, setBienvenidaClienta] = useState<string | null>(
     null
@@ -197,7 +200,6 @@ export function PedidoWizard({
     if (encontrada) {
       setBienvenidaClienta(encontrada.nombre);
       if (!nombre) setNombre(encontrada.nombre);
-      if (!direccion && encontrada.direccion) setDireccion(encontrada.direccion);
     }
   }
 
@@ -213,7 +215,7 @@ export function PedidoWizard({
         nombre.trim() &&
           telefono.trim() &&
           TELEFONO_US_REGEX.test(telefono.trim()) &&
-          direccion.trim() &&
+          sedeId &&
           diaEntrega
       );
     }
@@ -242,7 +244,7 @@ export function PedidoWizard({
   );
 
   function enviar() {
-    if (!diaEntrega) return;
+    if (!diaEntrega || !sedeId) return;
     setError(null);
 
     // Open the tab right away (synchronously, inside the click) so the
@@ -253,9 +255,9 @@ export function PedidoWizard({
     const datosEntrega: DatosEntrega = {
       nombre: nombre.trim(),
       telefono: telefono.trim(),
-      direccion: direccion.trim(),
       detalles: detalles.trim(),
       dia_entrega: diaEntrega,
+      sede_id: sedeId,
     };
 
     const comidasSeleccionadas: ComidaSeleccionada[] = comidasActivas.map(
@@ -301,9 +303,8 @@ export function PedidoWizard({
     <main className="min-h-screen bg-surface flex flex-col">
       <header className="flex items-center gap-3 px-4 h-16 border-b border-outline-variant/40">
         <a href="/pedido" className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center">
-            <UtensilsCrossed className="text-white" size={18} />
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="JJ Healthy Food" className="w-9 h-9 object-contain" />
           <div>
             <h1 className="font-display text-base font-semibold text-primary leading-none">
               JJ Healthy Food
@@ -354,16 +355,17 @@ export function PedidoWizard({
           <PasoEntrega
             nombre={nombre}
             telefono={telefono}
-            direccion={direccion}
             detalles={detalles}
             diaEntrega={diaEntrega}
             bienvenidaClienta={bienvenidaClienta}
+            sedes={sedes}
+            sedeId={sedeId}
             onNombreChange={setNombre}
             onTelefonoChange={setTelefono}
             onTelefonoBlur={alSalirDeTelefono}
-            onDireccionChange={setDireccion}
             onDetallesChange={setDetalles}
             onDiaChange={setDiaEntrega}
+            onSedeChange={setSedeId}
           />
         )}
 
@@ -374,9 +376,9 @@ export function PedidoWizard({
             proteinas={proteinas}
             opcionesDesayuno={opcionesDesayuno}
             nombre={nombre}
-            direccion={direccion}
             detalles={detalles}
             diaEntrega={diaEntrega}
+            sede={sedes.find((s) => s.id === sedeId) ?? null}
             total={total}
             onEditarPaso={setPaso}
           />
@@ -847,41 +849,44 @@ function ExtraToggle({
 function PasoEntrega({
   nombre,
   telefono,
-  direccion,
   detalles,
   diaEntrega,
   bienvenidaClienta,
+  sedes,
+  sedeId,
   onNombreChange,
   onTelefonoChange,
   onTelefonoBlur,
-  onDireccionChange,
   onDetallesChange,
   onDiaChange,
+  onSedeChange,
 }: {
   nombre: string;
   telefono: string;
-  direccion: string;
   detalles: string;
   diaEntrega: DiaEntrega | "";
   bienvenidaClienta: string | null;
+  sedes: SedeRetiro[];
+  sedeId: string;
   onNombreChange: (v: string) => void;
   onTelefonoChange: (v: string) => void;
   onTelefonoBlur: () => void;
-  onDireccionChange: (v: string) => void;
   onDetallesChange: (v: string) => void;
   onDiaChange: (v: DiaEntrega) => void;
+  onSedeChange: (v: string) => void;
 }) {
   const telefonoInvalido =
     telefono.trim().length > 0 && !TELEFONO_US_REGEX.test(telefono.trim());
+  const sedeElegida = sedes.find((s) => s.id === sedeId) ?? null;
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="font-display text-2xl font-semibold text-on-surface">
-          Delivery details
+          Pickup details
         </h2>
         <p className="text-on-surface-variant font-sans text-sm mt-1">
-          We need these to coordinate your delivery.
+          We need these to coordinate your pickup.
         </p>
       </div>
 
@@ -889,6 +894,42 @@ function PasoEntrega({
         <p className="text-sm font-sans text-primary bg-primary/10 rounded-xl px-4 py-3">
           Welcome back, {bienvenidaClienta}! We&apos;ve filled in your info.
         </p>
+      )}
+
+      {sedes.length > 1 ? (
+        <div className="space-y-2">
+          <label className="font-sans text-xs font-bold text-on-surface-variant uppercase">
+            Pickup location
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {sedes.map((s) => (
+              <Chip
+                key={s.id}
+                label={s.nombre}
+                selected={sedeId === s.id}
+                onClick={() => onSedeChange(s.id)}
+              />
+            ))}
+          </div>
+          {sedeElegida && (
+            <p className="font-sans text-sm text-on-surface-variant flex items-start gap-1.5 pt-1">
+              <MapPin size={14} className="shrink-0 mt-0.5" />
+              {sedeElegida.direccion}
+            </p>
+          )}
+        </div>
+      ) : (
+        sedeElegida && (
+          <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-primary/10 text-primary">
+            <MapPin size={18} className="shrink-0 mt-0.5" />
+            <div>
+              <p className="font-sans text-sm font-semibold">
+                Pickup location: {sedeElegida.nombre}
+              </p>
+              <p className="font-sans text-sm">{sedeElegida.direccion}</p>
+            </div>
+          </div>
+        )
       )}
 
       <div className="space-y-2">
@@ -925,28 +966,12 @@ function PasoEntrega({
 
       <div className="space-y-2">
         <label className="font-sans text-xs font-bold text-on-surface-variant uppercase">
-          Address
-        </label>
-        <div className="relative">
-          <MapPin size={18} className="absolute left-4 top-4 text-outline" />
-          <textarea
-            value={direccion}
-            onChange={(e) => onDireccionChange(e.target.value)}
-            placeholder="Street address, Apt/Unit, City, State, ZIP"
-            rows={2}
-            className="w-full pl-11 pr-4 py-3 bg-surface-container-lowest border border-outline-variant rounded-xl font-sans focus:ring-2 focus:ring-primary outline-none resize-none"
-          />
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <label className="font-sans text-xs font-bold text-on-surface-variant uppercase">
           Additional details (optional)
         </label>
         <textarea
           value={detalles}
           onChange={(e) => onDetallesChange(e.target.value)}
-          placeholder="Landmark, gate code, delivery instructions..."
+          placeholder="Anything we should know about your pickup?"
           rows={2}
           className="w-full px-4 py-3 bg-surface-container-lowest border border-outline-variant rounded-xl font-sans focus:ring-2 focus:ring-primary outline-none resize-none"
         />
@@ -954,7 +979,7 @@ function PasoEntrega({
 
       <div className="space-y-2">
         <label className="font-sans text-xs font-bold text-on-surface-variant uppercase">
-          Delivery day
+          Pickup day
         </label>
         <div className="flex gap-3">
           <Chip
@@ -979,9 +1004,9 @@ function PasoResumen({
   proteinas,
   opcionesDesayuno,
   nombre,
-  direccion,
   detalles,
   diaEntrega,
+  sede,
   total,
   onEditarPaso,
 }: {
@@ -990,9 +1015,9 @@ function PasoResumen({
   proteinas: OpcionMenu[];
   opcionesDesayuno: OpcionMenu[];
   nombre: string;
-  direccion: string;
   detalles: string;
   diaEntrega: DiaEntrega | "";
+  sede: SedeRetiro | null;
   total: number;
   onEditarPaso: (paso: number) => void;
 }) {
@@ -1057,13 +1082,15 @@ function PasoResumen({
         className="w-full text-left bg-surface-container-lowest border border-outline-variant rounded-xl p-4 hover:border-primary transition-colors"
       >
         <p className="font-sans text-xs font-bold text-secondary uppercase mb-1 flex items-center gap-1.5">
-          Delivery
+          Pickup
           <Pencil size={11} className="opacity-60" />
         </p>
         <p className="font-sans text-sm text-on-surface">{nombre}</p>
-        <p className="font-sans text-sm text-on-surface-variant">
-          {direccion}
-        </p>
+        {sede && (
+          <p className="font-sans text-sm text-on-surface-variant">
+            {sede.nombre} — {sede.direccion}
+          </p>
+        )}
         {detalles && (
           <p className="font-sans text-sm text-on-surface-variant italic">
             {detalles}
@@ -1080,10 +1107,19 @@ function PasoResumen({
 
 function IntroScreen({ onComenzar }: { onComenzar: () => void }) {
   return (
-    <main className="min-h-screen bg-primary flex flex-col">
-      <div className="flex-1 flex flex-col justify-center px-6 py-16 max-w-lg mx-auto text-center">
-        <div className="w-16 h-16 mx-auto rounded-2xl bg-white/15 flex items-center justify-center mb-6">
-          <UtensilsCrossed className="text-white" size={30} />
+    <main className="min-h-screen bg-primary flex flex-col relative overflow-hidden">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=900&q=80"
+        alt=""
+        className="absolute inset-0 w-full h-full object-cover opacity-80"
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-primary/80 via-primary/55 to-primary/85" />
+
+      <div className="relative z-10 flex-1 flex flex-col justify-center px-6 py-16 max-w-lg mx-auto text-center">
+        <div className="w-20 h-20 mx-auto rounded-2xl bg-white flex items-center justify-center mb-6 overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="JJ Healthy Food" className="w-16 h-16 object-contain" />
         </div>
 
         <p className="text-secondary-container font-sans text-xs font-bold uppercase tracking-widest mb-3">
@@ -1093,8 +1129,8 @@ function IntroScreen({ onComenzar }: { onComenzar: () => void }) {
           Build your healthy meal week in minutes
         </h1>
         <p className="font-sans text-white/80 text-base mb-10">
-          We save you time and effort: pick your meals, give us your address,
-          and we&apos;ll deliver wherever you are.
+          We save you time and effort: pick your meals, choose a pickup day,
+          and swing by to grab your order.
         </p>
 
         <div className="grid grid-cols-3 gap-3 mb-10">
@@ -1112,10 +1148,10 @@ function IntroScreen({ onComenzar }: { onComenzar: () => void }) {
           </div>
           <div className="flex flex-col items-center gap-2">
             <div className="w-11 h-11 rounded-full bg-white/15 flex items-center justify-center">
-              <Truck className="text-white" size={20} />
+              <Store className="text-white" size={20} />
             </div>
             <span className="font-sans text-xs text-white/70">
-              To your door
+              Easy pickup
             </span>
           </div>
         </div>

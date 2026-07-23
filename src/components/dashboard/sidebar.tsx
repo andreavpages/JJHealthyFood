@@ -16,13 +16,19 @@ export function Sidebar() {
 
   return (
     <aside className="hidden md:flex fixed left-0 top-0 h-full w-[280px] bg-primary flex-col py-6 z-50">
-      <div className="px-6 mb-10">
-        <h1 className="font-display text-2xl font-semibold text-on-primary">
-          JJ Healthy Food
-        </h1>
-        <p className="font-sans text-xs font-bold text-on-primary/60 uppercase tracking-widest mt-1">
-          Administración
-        </p>
+      <div className="px-6 mb-10 flex items-center gap-3">
+        <div className="w-12 h-12 shrink-0 rounded-xl bg-white flex items-center justify-center overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="JJ Healthy Food" className="w-10 h-10 object-contain" />
+        </div>
+        <div>
+          <h1 className="font-display text-xl font-semibold text-on-primary leading-tight">
+            JJ Healthy Food
+          </h1>
+          <p className="font-sans text-xs font-bold text-on-primary/60 uppercase tracking-widest mt-0.5">
+            Administración
+          </p>
+        </div>
       </div>
 
       <nav className="flex-1 flex flex-col gap-1">

@@ -1,8 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
-import { Settings, Lock } from "lucide-react";
+import { Settings, Lock, MapPin } from "lucide-react";
 import { CambiarClaveForm } from "@/components/dashboard/cambiar-clave-form";
 import { WhatsappNumeroForm } from "@/components/dashboard/whatsapp-numero-form";
+import { SedesRetiroPanel } from "@/components/dashboard/sedes-retiro-panel";
 import { obtenerConfiguracion } from "@/models/configuracion.model";
+import { listarSedes } from "@/models/sedes.model";
 
 export default async function ConfiguracionPage() {
   const supabase = await createClient();
@@ -11,6 +13,7 @@ export default async function ConfiguracionPage() {
     (await obtenerConfiguracion(supabase, "whatsapp_numero")) ??
     process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ??
     "";
+  const sedes = await listarSedes(supabase);
 
   return (
     <div className="max-w-[800px] mx-auto p-4 md:p-6">
@@ -41,11 +44,24 @@ export default async function ConfiguracionPage() {
           </div>
         </div>
 
+        {/* Direcciones de Retiro */}
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6">
+          <h3 className="font-sans text-lg font-semibold text-on-surface mb-2 flex items-center gap-2">
+            <MapPin size={20} />
+            Direcciones de Retiro
+          </h3>
+          <p className="font-sans text-sm text-on-surface-variant mb-4">
+            El cliente ve la sede marcada como activa al armar su pedido.
+            Podés editar la dirección o cargar otras sedes.
+          </p>
+          <SedesRetiroPanel sedes={sedes} />
+        </div>
+
         {/* Días de Entrega */}
         <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6">
-          <h3 className="font-sans text-lg font-semibold text-on-surface mb-4">Días de Entrega</h3>
+          <h3 className="font-sans text-lg font-semibold text-on-surface mb-4">Días de Retiro</h3>
           <p className="font-sans text-sm text-on-surface-variant mb-4">
-            Los días en que se realizan entregas
+            Los días en que los clientes pueden retirar su pedido
           </p>
           <div className="flex flex-wrap gap-3">
             {["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"].map((dia) => (

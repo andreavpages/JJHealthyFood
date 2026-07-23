@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { UtensilsCrossed, Mail, Lock, Eye, EyeOff, ArrowRight, Star } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Star } from "lucide-react";
 import { login, type LoginState } from "@/controllers/auth.actions";
 
 const initialState: LoginState = { error: null };
@@ -17,8 +17,9 @@ export function LoginForm() {
         <div className="relative w-full h-[30vh] md:hidden">
           <div className="absolute inset-0 bg-gradient-to-b from-primary/40 via-primary/10 to-surface" />
           <div className="absolute inset-0 flex flex-col items-center justify-end pb-6 px-4">
-            <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mb-4 shadow-xl shadow-primary/20">
-              <UtensilsCrossed className="text-white" size={30} />
+            <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mb-4 shadow-xl shadow-primary/20 overflow-hidden">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo.png" alt="JJ Healthy Food" className="w-14 h-14 object-contain" />
             </div>
             <h1 className="font-display text-2xl font-semibold text-primary tracking-tight">
               JJ Healthy Food
@@ -34,8 +35,9 @@ export function LoginForm() {
           {/* Marca (solo en desktop) */}
           <div className="hidden md:block mb-10">
             <div className="flex items-center gap-3 mb-2">
-              <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center">
-                <UtensilsCrossed className="text-white" size={26} />
+              <div className="w-12 h-12 bg-white border border-outline-variant rounded-xl flex items-center justify-center overflow-hidden">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/logo.png" alt="JJ Healthy Food" className="w-10 h-10 object-contain" />
               </div>
               <h1 className="font-display text-2xl font-semibold text-primary tracking-tight">
                 JJ Healthy Food
@@ -146,11 +148,13 @@ export function LoginForm() {
 
         {/* Imagen + testimonio (solo en desktop) */}
         <div className="hidden md:block w-1/2 relative bg-surface-container-high overflow-hidden">
-          <div className="absolute inset-0 z-0 bg-gradient-to-br from-primary-container to-primary" />
-          <div className="absolute inset-0 z-10 bg-gradient-to-tr from-primary/60 via-transparent to-transparent" />
-          <div className="absolute top-0 right-0 p-12 opacity-20 pointer-events-none">
-            <UtensilsCrossed className="text-white" size={100} />
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="https://images.unsplash.com/photo-1604909052743-94e838986d24?w=900&q=80"
+            alt=""
+            className="absolute inset-0 w-full h-full object-cover z-0"
+          />
+          <div className="absolute inset-0 z-10 bg-gradient-to-t from-primary via-primary/50 to-primary/20" />
           <div className="absolute bottom-16 left-12 right-12 z-30 p-8 bg-white/10 backdrop-blur-md rounded-3xl border border-white/20">
             <div className="flex flex-col gap-4">
               <div className="flex items-center gap-2">

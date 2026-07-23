@@ -44,7 +44,7 @@ export function NotificationsDropdown({ pedidosIniciales }: { pedidosIniciales: 
       </button>
 
       {abierto && (
-        <div className="absolute right-0 top-12 w-80 bg-surface rounded-xl shadow-xl border border-outline-variant z-50 overflow-hidden">
+        <div className="absolute right-0 top-12 w-80 max-w-[calc(100vw-2rem)] bg-surface rounded-xl shadow-xl border border-outline-variant z-50 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-outline-variant">
             <h3 className="font-sans text-sm font-semibold text-on-surface">Notificaciones</h3>
             <button type="button" onClick={() => setAbierto(false)} className="text-on-surface-variant hover:text-on-surface">

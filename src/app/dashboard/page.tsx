@@ -55,8 +55,8 @@ export default async function PedidosPage() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 mb-8">
-        <div className="md:col-span-8 bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 flex justify-between items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6 mb-8">
+        <div className="lg:col-span-8 bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 flex justify-between items-start">
           <div>
             <p className="font-sans text-xs font-bold text-secondary uppercase tracking-wider mb-2">
               Ingresos Mensuales
@@ -70,7 +70,7 @@ export default async function PedidosPage() {
           </div>
         </div>
 
-        <div className="md:col-span-4 flex flex-col gap-4 md:gap-6">
+        <div className="lg:col-span-4 flex flex-col sm:flex-row lg:flex-col gap-4 md:gap-6">
           <div className="flex-1 bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 flex justify-between items-center">
             <div>
               <p className="font-sans text-xs font-bold text-on-surface-variant uppercase mb-1">
