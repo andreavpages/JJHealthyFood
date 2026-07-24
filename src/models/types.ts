@@ -68,7 +68,7 @@ export type PedidoParaComanda = Pedido & {
 
 export type EstadoClienta = "vip" | "recurrente" | "nuevo" | "inactivo";
 
-export type CategoriaMenu = "proteina" | "carbohidrato" | "vegetal" | "desayuno";
+export type CategoriaMenu = "proteina" | "carbohidrato" | "vegetal" | "desayuno" | "plato";
 export type NivelProteina = "sencilla" | "premium";
 
 export type OpcionMenu = {
@@ -79,4 +79,5 @@ export type OpcionMenu = {
   precio_racion: number | null;
   precio_macro_gramo: number | null;
   orden: number;
+  excluido_extra: boolean;
 };

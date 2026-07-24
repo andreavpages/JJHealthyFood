@@ -112,6 +112,8 @@ export function ComandaTicket({
                   <span className="flex-1 text-[12px] text-black font-medium">
                     {c.es_desayuno
                       ? c.proteina
+                      : !c.carbohidrato && !c.vegetal
+                      ? c.proteina
                       : `${c.proteina} + ${c.carbohidrato}${c.vegetal ? ` + ${c.vegetal}` : ""}`}
                     {c.extra ? ` + ${c.extra}` : ""}
                     {!c.es_desayuno &&

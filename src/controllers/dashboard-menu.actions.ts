@@ -7,8 +7,11 @@ import {
   eliminarOpcionMenu,
   actualizarPrecioMacroGramo,
   actualizarPrecioRacion,
+  actualizarExtrasConfig,
+  toggleExcluidoExtra,
 } from "@/models/menu.model";
 import type { CategoriaMenu, NivelProteina } from "@/models/types";
+import type { ExtrasConfig } from "@/models/menu.model";
 
 export async function crearOpcionMenu(
   categoria: CategoriaMenu,
@@ -188,6 +191,20 @@ export async function actualizarPreciosExistentes() {
   console.log("Premium actualizadas:", count2);
   if (err2) console.error("Error actualizando premium:", err2);
 
+  revalidatePath("/dashboard/menu");
+  revalidatePath("/pedido");
+}
+
+export async function guardarExtrasConfig(config: Partial<ExtrasConfig>) {
+  const supabase = await createClient();
+  await actualizarExtrasConfig(supabase, config);
+  revalidatePath("/dashboard/menu");
+  revalidatePath("/pedido");
+}
+
+export async function toggleExtraOpcion(id: string, excluido: boolean) {
+  const supabase = await createClient();
+  await toggleExcluidoExtra(supabase, id, excluido);
   revalidatePath("/dashboard/menu");
   revalidatePath("/pedido");
 }

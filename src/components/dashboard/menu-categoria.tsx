@@ -182,11 +182,13 @@ function ChipSimple({
   onQuitar,
   pending,
   esDesayuno = false,
+  esPlato = false,
 }: {
   opcion: OpcionMenu;
   onQuitar: () => void;
   pending: boolean;
   esDesayuno?: boolean;
+  esPlato?: boolean;
 }) {
   return (
     <div className="inline-flex items-center gap-2 pl-3 pr-1.5 py-2 rounded-xl bg-surface-container-low border border-outline-variant">
@@ -194,6 +196,12 @@ function ChipSimple({
         {opcion.nombre}
       </span>
       {esDesayuno && <PrecioRacionEditor opcion={opcion} />}
+      {esPlato && (
+        <>
+          <PrecioRacionEditor opcion={opcion} />
+          <PrecioMacroEditor opcion={opcion} />
+        </>
+      )}
       <button
         type="button"
         onClick={onQuitar}
@@ -214,17 +222,19 @@ export function MenuCategoria({
   titulo,
   opciones,
   esProteina = false,
+  esPlato = false,
 }: {
   categoria: CategoriaMenu;
   titulo: string;
   opciones: OpcionMenu[];
   esProteina?: boolean;
+  esPlato?: boolean;
 }) {
   const [tab, setTab] = useState<TabTipo>("racion");
   const [nuevo, setNuevo] = useState("");
   const [nivel, setNivel] = useState<NivelProteina>("sencilla");
-  const [precioRacion, setPrecioRacion] = useState("9");
-  const [precioMacro, setPrecioMacro] = useState("12");
+  const [precioRacion, setPrecioRacion] = useState(esPlato ? "9" : "9");
+  const [precioMacro, setPrecioMacro] = useState(esPlato ? "12" : "12");
   const [precioDesayuno, setPrecioDesayuno] = useState("7");
   const [pending, startTransition] = useTransition();
 
@@ -246,13 +256,18 @@ export function MenuCategoria({
     const nombre = nuevo.trim();
     if (!nombre) return;
     setNuevo("");
-    const precio = tab === "racion" ? Number(precioRacion) : Number(precioMacro);
     startTransition(async () => {
       if (esProteina) {
+        const precio = tab === "racion" ? Number(precioRacion) : Number(precioMacro);
         await crearOpcionMenu(categoria, nombre, {
           nivel,
           precioRacion: tab === "racion" ? precio || 0 : Number(preciosDefault[nivel].racion),
           precioMacroGramo: tab === "macro" ? precio || 0 : Number(preciosDefault[nivel].macro),
+        });
+      } else if (esPlato) {
+        await crearOpcionMenu(categoria, nombre, {
+          precioRacion: Number(precioRacion) || 9,
+          precioMacroGramo: Number(precioMacro) || 12,
         });
       } else if (categoria === "desayuno") {
         await crearOpcionMenu(categoria, nombre, {
@@ -464,6 +479,7 @@ export function MenuCategoria({
                 onQuitar={() => quitar(o.id)}
                 pending={pending}
                 esDesayuno={categoria === "desayuno"}
+                esPlato={esPlato}
               />
             ))}
           </div>
@@ -477,7 +493,7 @@ export function MenuCategoria({
                 onKeyDown={(e) => {
                   if (e.key === "Enter") agregar();
                 }}
-                placeholder="Nueva opción..."
+                placeholder={esPlato ? "Nombre del plato..." : "Nueva opción..."}
                 disabled={pending}
                 className="flex-1 min-w-[140px] h-10 px-3 bg-surface-container-low border border-outline-variant rounded-xl font-sans text-sm focus:ring-2 focus:ring-primary outline-none"
               />
@@ -495,6 +511,34 @@ export function MenuCategoria({
                   />
                 </div>
               )}
+              {esPlato && (
+                <>
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-on-surface-variant font-sans">ración</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step="1"
+                      value={precioRacion}
+                      onChange={(e) => setPrecioRacion(e.target.value)}
+                      disabled={pending}
+                      className="w-20 h-10 px-2 bg-surface-container-low border border-outline-variant rounded-xl font-sans text-sm outline-none"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-on-surface-variant font-sans">macro</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step="1"
+                      value={precioMacro}
+                      onChange={(e) => setPrecioMacro(e.target.value)}
+                      disabled={pending}
+                      className="w-20 h-10 px-2 bg-surface-container-low border border-outline-variant rounded-xl font-sans text-sm outline-none"
+                    />
+                  </div>
+                </>
+              )}
               <button
                 type="button"
                 onClick={agregar}
@@ -507,6 +551,11 @@ export function MenuCategoria({
             {(categoria === "carbohidrato" || categoria === "vegetal") && (
               <p className="text-[11px] text-on-surface-variant font-sans mt-2">
                 Incluido sin costo extra.
+              </p>
+            )}
+            {esPlato && (
+              <p className="text-[11px] text-on-surface-variant font-sans mt-2">
+                Plato completo. Precio ración y precio macro.
               </p>
             )}
           </div>

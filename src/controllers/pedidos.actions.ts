@@ -62,6 +62,8 @@ function construirMensajeWhatsapp(
     .map((c) => {
       const base = c.es_desayuno
         ? c.proteina
+        : !c.carbohidrato && !c.vegetal
+        ? c.proteina
         : `${c.proteina} + ${c.carbohidrato}${c.vegetal ? ` + ${c.vegetal}` : ""}`;
       const extra = c.extra ? ` + extra: ${c.extra}` : "";
       const gramos =

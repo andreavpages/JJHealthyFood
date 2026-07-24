@@ -1,16 +1,19 @@
 import { createClient } from "@/lib/supabase/server";
-import { listarOpcionesMenu } from "@/models/menu.model";
+import { listarOpcionesMenu, listarExtrasConfig } from "@/models/menu.model";
 import { MenuCategoria } from "@/components/dashboard/menu-categoria";
 import { RecargarMenuButton } from "@/components/dashboard/recargar-menu-button";
+import { ExtrasConfigPanel } from "@/components/dashboard/extras-config-panel";
 
 export default async function MenuSemanalPage() {
   const supabase = await createClient();
   const opciones = await listarOpcionesMenu(supabase);
+  const extrasConfig = await listarExtrasConfig(supabase);
 
   const proteinas = opciones.filter((o) => o.categoria === "proteina");
   const carbohidratos = opciones.filter((o) => o.categoria === "carbohidrato");
   const vegetales = opciones.filter((o) => o.categoria === "vegetal");
   const desayuno = opciones.filter((o) => o.categoria === "desayuno");
+  const platos = opciones.filter((o) => o.categoria === "plato");
 
   return (
     <div className="max-w-[1000px] mx-auto p-4 md:p-6">
@@ -55,6 +58,18 @@ export default async function MenuSemanalPage() {
           categoria="desayuno"
           titulo="Opciones de desayuno"
           opciones={desayuno}
+        />
+        <MenuCategoria
+          categoria="plato"
+          titulo="Platos"
+          opciones={platos}
+          esPlato
+        />
+        <ExtrasConfigPanel
+          config={extrasConfig}
+          proteinas={proteinas}
+          carbohidratos={carbohidratos}
+          vegetales={vegetales}
         />
       </div>
     </div>

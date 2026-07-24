@@ -20,10 +20,11 @@ import {
   type DatosEntrega,
 } from "@/controllers/pedidos.actions";
 import type { DiaEntrega, ModoPedido, OpcionMenu, SedeRetiro } from "@/models/types";
+import type { ExtrasConfig } from "@/models/menu.model";
 
 const TELEFONO_US_REGEX = /^(\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/;
 
-type TipoComida = "regular" | "desayuno";
+type TipoComida = "regular" | "desayuno" | "plato";
 
 type ComidaSlot = {
   tipo: TipoComida;
@@ -82,7 +83,9 @@ function precioComida(
   slot: ComidaSlot,
   modo: ModoPedido,
   proteinas: OpcionMenu[],
-  opcionesDesayuno: OpcionMenu[]
+  opcionesDesayuno: OpcionMenu[],
+  extrasConfig?: ExtrasConfig,
+  platos?: OpcionMenu[]
 ): number {
   if (slot.tipo === "desayuno") {
     const desayuno = opcionesDesayuno.find((d) => d.nombre === slot.proteinaId);
@@ -90,6 +93,18 @@ function precioComida(
     const precioBD = Number(desayuno.precio_racion);
     if (!isNaN(precioBD) && precioBD > 0) return precioBD;
     return 0;
+  }
+  if (slot.tipo === "plato") {
+    const plato = platos?.find((p) => p.id === slot.proteinaId);
+    if (!plato) return 0;
+    if (modo === "macro") {
+      const precioBD = Number(plato.precio_macro_gramo);
+      if (!isNaN(precioBD) && precioBD > 0) return precioBD;
+      return 12;
+    }
+    const precioBD = Number(plato.precio_racion);
+    if (!isNaN(precioBD) && precioBD > 0) return precioBD;
+    return 9;
   }
   const proteina = proteinas.find((p) => p.id === slot.proteinaId);
   if (!proteina) return 0;
@@ -108,12 +123,13 @@ function precioComida(
 
   let extra = 0;
   if (slot.extraActivo && slot.extraValor) {
-    const extraEsProteina = proteinas.some((p) => p.nombre === slot.extraValor);
-    if (extraEsProteina) {
-      const nivel = proteinas.find((p) => p.nombre === slot.extraValor)?.nivel;
-      extra = nivel === "premium" ? 2 : 1;
+    const extraProteina = proteinas.find((p) => p.nombre === slot.extraValor);
+    if (extraProteina) {
+      extra = extraProteina.nivel === "premium"
+        ? (extrasConfig?.proteina_premium ?? 2)
+        : (extrasConfig?.proteina_regular ?? 1);
     } else {
-      extra = 0.5;
+      extra = extrasConfig?.carbohidrato ?? 0.5;
     }
   }
 
@@ -134,12 +150,16 @@ export function PedidoWizard({
   vegetales,
   opcionesDesayuno,
   sedes,
+  extrasConfig,
+  platos = [],
 }: {
   proteinas: OpcionMenu[];
   carbohidratos: string[];
   vegetales: string[];
   opcionesDesayuno: OpcionMenu[];
   sedes: SedeRetiro[];
+  extrasConfig?: ExtrasConfig;
+  platos?: OpcionMenu[];
 }) {
   const [iniciado, setIniciado] = useState(false);
   const [paso, setPaso] = useState(0);
@@ -208,6 +228,7 @@ export function PedidoWizard({
     if (esPasoComida) {
       const c = comidas[paso - 2];
       if (c.tipo === "desayuno") return Boolean(c.proteinaId);
+      if (c.tipo === "plato") return Boolean(c.proteinaId);
       return Boolean(c.proteinaId && c.carbohidrato);
     }
     if (esPasoEntrega) {
@@ -239,7 +260,7 @@ export function PedidoWizard({
 
   const comidasActivas = comidas.slice(0, cantidad);
   const total = comidasActivas.reduce(
-    (suma, c) => suma + precioComida(c, modo, proteinas, opcionesDesayuno),
+    (suma, c) => suma + precioComida(c, modo, proteinas, opcionesDesayuno, extrasConfig, platos),
     0
   );
 
@@ -263,17 +284,18 @@ export function PedidoWizard({
     const comidasSeleccionadas: ComidaSeleccionada[] = comidasActivas.map(
       (c, i) => {
         const proteina = proteinas.find((p) => p.id === c.proteinaId);
+        const plato = platos?.find((p) => p.id === c.proteinaId);
         return {
           numero_comida: i + 1,
-          proteina: c.tipo === "desayuno" ? c.carbohidrato : proteina?.nombre ?? "",
-          carbohidrato: c.tipo === "desayuno" ? "" : c.carbohidrato,
-          vegetal: c.tipo === "desayuno" ? null : c.vegetal || null,
+          proteina: c.tipo === "desayuno" ? c.carbohidrato : c.tipo === "plato" ? plato?.nombre ?? "" : proteina?.nombre ?? "",
+          carbohidrato: c.tipo === "desayuno" || c.tipo === "plato" ? "" : c.carbohidrato,
+          vegetal: c.tipo === "desayuno" || c.tipo === "plato" ? null : c.vegetal || null,
           extra: c.extraActivo && c.extraValor ? c.extraValor : null,
           gramos_proteina:
             modo === "macro" && c.tipo !== "desayuno" ? c.gramosProteina : null,
           gramos_carbohidrato:
             modo === "macro" && c.tipo !== "desayuno" ? c.gramosCarbohidrato : null,
-          precio: precioComida(c, modo, proteinas, opcionesDesayuno),
+          precio: precioComida(c, modo, proteinas, opcionesDesayuno, extrasConfig, platos),
           es_desayuno: c.tipo === "desayuno",
         };
       }
@@ -348,6 +370,8 @@ export function PedidoWizard({
             vegetales={vegetales}
             opcionesDesayuno={opcionesDesayuno}
             onCambiar={(cambios) => actualizarComida(paso - 2, cambios)}
+            extrasConfig={extrasConfig}
+            platos={platos}
           />
         )}
 
@@ -381,6 +405,8 @@ export function PedidoWizard({
             sede={sedes.find((s) => s.id === sedeId) ?? null}
             total={total}
             onEditarPaso={setPaso}
+            extrasConfig={extrasConfig}
+            platos={platos}
           />
         )}
 
@@ -535,6 +561,8 @@ function PasoComida({
   vegetales,
   opcionesDesayuno,
   onCambiar,
+  extrasConfig,
+  platos = [],
 }: {
   numero: number;
   comida: ComidaSlot;
@@ -544,6 +572,8 @@ function PasoComida({
   vegetales: string[];
   opcionesDesayuno: OpcionMenu[];
   onCambiar: (cambios: Partial<ComidaSlot>) => void;
+  extrasConfig?: ExtrasConfig;
+  platos?: OpcionMenu[];
 }) {
   const esDesayuno = comida.tipo === "desayuno";
   const sencillas = proteinas.filter((p) => p.nivel === "sencilla");
@@ -570,6 +600,13 @@ function PasoComida({
             selected={comida.tipo === "regular"}
             onClick={() => onCambiar({ tipo: "regular", proteinaId: "" })}
           />
+          {platos.length > 0 && (
+            <Chip
+              label="Plato"
+              selected={comida.tipo === "plato"}
+              onClick={() => onCambiar({ tipo: "plato", proteinaId: "" })}
+            />
+          )}
           <Chip
             label="Breakfast"
             selected={esDesayuno}
@@ -578,7 +615,115 @@ function PasoComida({
         </div>
       </div>
 
-      {esDesayuno ? (
+      {comida.tipo === "plato" ? (
+        <>
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <p className="font-sans text-xs font-bold uppercase tracking-wide text-secondary">
+                Choose your dish
+              </p>
+            </div>
+            <div className="flex flex-col gap-2">
+              {platos.map((o) => {
+                const precio = modo === "macro"
+                  ? (Number(o.precio_macro_gramo) || 12)
+                  : (Number(o.precio_racion) || 9);
+                return (
+                  <Chip
+                    key={o.id}
+                    label={`${o.nombre} — $${precio}`}
+                    selected={comida.proteinaId === o.id}
+                    onClick={() => onCambiar({ proteinaId: o.id })}
+                  />
+                );
+              })}
+            </div>
+          </div>
+
+          {modo === "macro" && (
+            <div className="bg-surface-container-low rounded-2xl p-5 space-y-5">
+              <div className="flex items-center justify-between">
+                <span className="font-sans text-xs font-bold text-on-surface-variant uppercase">
+                  Protein
+                </span>
+                <div className="flex items-center gap-4">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onCambiar({
+                        gramosProteina: Math.max(0, comida.gramosProteina - 25),
+                      })
+                    }
+                    className="w-8 h-8 rounded-full border border-outline-variant text-on-surface-variant flex items-center justify-center hover:bg-surface-container-highest active:scale-95 transition-all"
+                  >
+                    <Minus size={14} />
+                  </button>
+                  <span className="font-sans text-lg font-semibold text-on-surface w-16 text-center">
+                    {comida.gramosProteina}
+                    <span className="text-xs font-normal text-on-surface-variant ml-0.5">g</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onCambiar({
+                        gramosProteina: comida.gramosProteina + 25,
+                      })
+                    }
+                    className="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center hover:opacity-90 active:scale-95 transition-all"
+                  >
+                    <Plus size={14} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="h-px bg-outline-variant/50" />
+
+              <div className="flex items-center justify-between">
+                <span className="font-sans text-xs font-bold text-on-surface-variant uppercase">
+                  Carb
+                </span>
+                <div className="flex items-center gap-4">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onCambiar({
+                        gramosCarbohidrato: Math.max(0, comida.gramosCarbohidrato - 25),
+                      })
+                    }
+                    className="w-8 h-8 rounded-full border border-outline-variant text-on-surface-variant flex items-center justify-center hover:bg-surface-container-highest active:scale-95 transition-all"
+                  >
+                    <Minus size={14} />
+                  </button>
+                  <span className="font-sans text-lg font-semibold text-on-surface w-16 text-center">
+                    {comida.gramosCarbohidrato}
+                    <span className="text-xs font-normal text-on-surface-variant ml-0.5">g</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onCambiar({
+                        gramosCarbohidrato: comida.gramosCarbohidrato + 25,
+                      })
+                    }
+                    className="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center hover:opacity-90 active:scale-95 transition-all"
+                  >
+                    <Plus size={14} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <ExtraToggle
+            comida={comida}
+            onCambiar={onCambiar}
+            proteinas={proteinas}
+            carbohidratos={carbohidratos}
+            vegetales={vegetales}
+            extrasConfig={extrasConfig}
+          />
+        </>
+      ) : esDesayuno ? (
         <div>
           <div className="flex items-center gap-2 mb-3">
             <p className="font-sans text-xs font-bold uppercase tracking-wide text-secondary">
@@ -758,6 +903,7 @@ function PasoComida({
             proteinas={proteinas}
             carbohidratos={carbohidratos}
             vegetales={vegetales}
+            extrasConfig={extrasConfig}
           />
         </>
       )}
@@ -771,12 +917,14 @@ function ExtraToggle({
   proteinas,
   carbohidratos,
   vegetales,
+  extrasConfig,
 }: {
   comida: ComidaSlot;
   onCambiar: (cambios: Partial<ComidaSlot>) => void;
   proteinas: OpcionMenu[];
   carbohidratos: string[];
   vegetales: string[];
+  extrasConfig?: ExtrasConfig;
 }) {
   return (
     <div>
@@ -797,13 +945,13 @@ function ExtraToggle({
         <div className="space-y-3">
           <div>
             <p className="text-[11px] uppercase mb-1.5 text-[#c2410c] font-bold tracking-wide">
-              Another protein <span className="text-[#c2410c]">(+ $1 - $2)</span>
+              Another protein <span className="text-[#c2410c]">(+ ${extrasConfig?.proteina_regular ?? 1} - ${extrasConfig?.proteina_premium ?? 2})</span>
             </p>
             <div className="flex flex-wrap gap-2">
-              {proteinas.map((p) => (
+              {proteinas.filter((p) => !p.excluido_extra).map((p) => (
                 <Chip
                   key={p.id}
-                  label={`${p.nombre} (+ $${p.nivel === "premium" ? "2" : "1"})`}
+                  label={`${p.nombre} (+ $${p.nivel === "premium" ? (extrasConfig?.proteina_premium ?? 2) : (extrasConfig?.proteina_regular ?? 1)})`}
                   selected={comida.extraValor === p.nombre}
                   onClick={() => onCambiar({ extraValor: p.nombre })}
                 />
@@ -812,13 +960,13 @@ function ExtraToggle({
           </div>
           <div>
             <p className="text-[11px] uppercase mb-1.5 text-green-600 font-bold tracking-wide">
-              Another carb <span className="text-green-600">(+ $0.50)</span>
+              Another carb <span className="text-green-600">(+ ${extrasConfig?.carbohidrato ?? 0.5})</span>
             </p>
             <div className="flex flex-wrap gap-2">
               {carbohidratos.map((c) => (
                 <Chip
                   key={c}
-                  label={`${c} (+ $0.50)`}
+                  label={`${c} (+ $${extrasConfig?.carbohidrato ?? 0.5})`}
                   selected={comida.extraValor === c}
                   onClick={() => onCambiar({ extraValor: c })}
                 />
@@ -827,7 +975,7 @@ function ExtraToggle({
           </div>
           <div>
             <p className="text-[11px] uppercase mb-1.5 text-teal-600 font-bold tracking-wide">
-              Another veggie <span className="text-teal-600">free</span>
+              Another veggie <span className="text-teal-600">{extrasConfig?.vegetal === 0 || !extrasConfig?.vegetal ? "free" : `+ $${extrasConfig.vegetal}`}</span>
             </p>
             <div className="flex flex-wrap gap-2">
               {vegetales.map((v) => (
@@ -1009,6 +1157,8 @@ function PasoResumen({
   sede,
   total,
   onEditarPaso,
+  extrasConfig,
+  platos = [],
 }: {
   comidas: ComidaSlot[];
   modo: ModoPedido;
@@ -1020,6 +1170,8 @@ function PasoResumen({
   sede: SedeRetiro | null;
   total: number;
   onEditarPaso: (paso: number) => void;
+  extrasConfig?: ExtrasConfig;
+  platos?: OpcionMenu[];
 }) {
   return (
     <div className="space-y-6">
@@ -1036,7 +1188,8 @@ function PasoResumen({
       <div className="space-y-3">
         {comidas.map((c, i) => {
           const proteina = proteinas.find((p) => p.id === c.proteinaId);
-          const precio = precioComida(c, modo, proteinas, opcionesDesayuno);
+          const platoItem = platos?.find((p) => p.id === c.proteinaId);
+          const precio = precioComida(c, modo, proteinas, opcionesDesayuno, extrasConfig, platos);
           return (
             <button
               key={i}
@@ -1046,7 +1199,7 @@ function PasoResumen({
             >
               <div className="flex justify-between items-start gap-2">
                 <p className="font-sans text-xs font-bold text-secondary uppercase mb-1 flex items-center gap-1.5">
-                  Meal {i + 1} · {c.tipo === "desayuno" ? "Breakfast" : "Regular"}
+                  Meal {i + 1} · {c.tipo === "desayuno" ? "Breakfast" : c.tipo === "plato" ? "Plato" : "Regular"}
                   <Pencil size={11} className="opacity-60" />
                 </p>
                 <p className="font-sans text-sm font-semibold text-primary shrink-0">
@@ -1056,6 +1209,8 @@ function PasoResumen({
               <p className="font-sans text-sm text-on-surface">
                 {c.tipo === "desayuno"
                   ? c.carbohidrato
+                  : c.tipo === "plato"
+                  ? platoItem?.nombre ?? ""
                   : `${proteina?.nombre} + ${c.carbohidrato}${c.vegetal ? ` + ${c.vegetal}` : ""}`}
                 {c.extraActivo && c.extraValor ? ` + ${c.extraValor}` : ""}
                 {modo === "macro" && c.tipo !== "desayuno"

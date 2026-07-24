@@ -1,6 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CategoriaMenu, NivelProteina, OpcionMenu } from "./types";
 
+export type ExtrasConfig = {
+  proteina_regular: number;
+  proteina_premium: number;
+  carbohidrato: number;
+  vegetal: number;
+};
+
 export async function listarOpcionesMenu(
   supabase: SupabaseClient
 ): Promise<OpcionMenu[]> {
@@ -78,4 +85,56 @@ export async function actualizarPrecioRacion(
 
   if (error) throw error;
   return data as OpcionMenu;
+}
+
+export async function listarExtrasConfig(
+  supabase: SupabaseClient
+): Promise<ExtrasConfig> {
+  const { data, error } = await supabase
+    .from("extras_config")
+    .select("id, precio");
+
+  if (error) throw error;
+
+  const defaults: ExtrasConfig = {
+    proteina_regular: 1,
+    proteina_premium: 2,
+    carbohidrato: 0.5,
+    vegetal: 0,
+  };
+
+  if (!data) return defaults;
+
+  for (const row of data) {
+    if (row.id in defaults) {
+      (defaults as Record<string, number>)[row.id] = row.precio;
+    }
+  }
+
+  return defaults;
+}
+
+export async function actualizarExtrasConfig(
+  supabase: SupabaseClient,
+  config: Partial<ExtrasConfig>
+): Promise<void> {
+  for (const [key, precio] of Object.entries(config)) {
+    if (precio === undefined) continue;
+    const { error } = await supabase
+      .from("extras_config")
+      .upsert({ id: key, precio }, { onConflict: "id" });
+    if (error) throw error;
+  }
+}
+
+export async function toggleExcluidoExtra(
+  supabase: SupabaseClient,
+  id: string,
+  excluido: boolean
+): Promise<void> {
+  const { error } = await supabase
+    .from("opciones_menu")
+    .update({ excluido_extra: excluido })
+    .eq("id", id);
+  if (error) throw error;
 }
